@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchPuzzles, withBase, apiUrl, Puzzle } from "@/lib/utils";
 import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
@@ -35,6 +35,7 @@ export default function ProblemOfTheWeek() {
 	const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [activeSection, setActiveSection] = useState("homebase");
 
 	useEffect(() => {
 		(async () => {
@@ -57,10 +58,131 @@ export default function ProblemOfTheWeek() {
 		return puzzles[0] ?? null;
 	}, [puzzles, id]);
 
-	if (loading) return <div className="p-6">Loading…</div>;
-	if (error) return <div className="p-6 text-red-600">{error}</div>;
-	if (!puzzle)
-		return <div className="p-6">No puzzle yet. Check back soon!</div>;
+	const renderContent = () => {
+		if (loading) return <div className="p-6">Loading…</div>;
+		if (error) return <div className="p-6 text-red-600">{error}</div>;
+		if (!puzzle) return <div className="p-6">No puzzle yet. Check back soon!</div>;
+
+		switch (activeSection) {
+			case "homebase":
+				return (
+					<div className="space-y-6">
+						<header className="mb-6">
+							<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
+							<p className="mt-1 text-sm text-gray-500">
+								Problem of the Week • {new Date(puzzle.date).toLocaleDateString()}
+								{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
+							</p>
+
+							<div className="mt-4 flex gap-3">
+								<Link
+									to="/problem-of-the-week/archive"
+									className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+								>
+									See Archives
+								</Link>
+
+								{puzzle?.id !== potwID && (
+									<Link
+										to="/problem-of-the-week"
+										className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+									>
+										Current POTW
+									</Link>
+								)}
+							</div>
+						</header>
+
+						{puzzle.image && (
+							<img
+								src={withBase(puzzle.image!)}
+								alt={puzzle.title}
+								className="mb-6 w-full rounded-lg border object-contain"
+							/>
+						)}
+
+						<p className="mb-8 whitespace-pre-wrap text-gray-800">
+							{puzzle.prompt}
+						</p>
+
+						<SubmissionForm puzzleId={puzzle.id} />
+					</div>
+				);
+
+			case "leaderboard":
+				return (
+					<div className="space-y-6">
+						<h2 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h2>
+						
+						<div className="grid gap-6 md:grid-cols-2 mb-8">
+							<Card>
+								<CardHeader>
+									<CardTitle>POTW's Solved</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<p className="text-4xl font-bold text-primary">0</p>
+									<p className="text-sm text-muted-foreground mt-2">Total problems completed</p>
+								</CardContent>
+							</Card>
+
+							<Card>
+								<CardHeader>
+									<CardTitle>Coins</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<p className="text-4xl font-bold text-primary">0</p>
+									<p className="text-sm text-muted-foreground mt-2">Earned from completions</p>
+								</CardContent>
+							</Card>
+						</div>
+
+						<Card>
+							<CardHeader>
+								<CardTitle>More Data</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<ul className="space-y-2 list-disc list-inside text-gray-700">
+									<li>Current streak: [Placeholder]</li>
+									<li>Longest streak: [Placeholder]</li>
+									<li>Average difficulty: [Placeholder]</li>
+									<li>First submission date: [Placeholder]</li>
+									<li>Most recent submission: [Placeholder]</li>
+									<li>Success rate: [Placeholder]</li>
+								</ul>
+							</CardContent>
+						</Card>
+					</div>
+				);
+
+			case "information":
+				return (
+					<div className="space-y-6">
+						<Card>
+							<CardHeader>
+								<CardTitle>About Problem of the Week</CardTitle>
+							</CardHeader>
+							<CardContent className="space-y-4 text-gray-700">
+								<p>
+									The Problem of the Week (POTW) is a weekly mathematical challenge designed to test your problem-solving skills and mathematical reasoning. Each week, we present a new puzzle that ranges in difficulty from beginner to advanced levels.
+								</p>
+								<p>
+									By participating consistently, you can earn coins and build your streak. These achievements not only showcase your dedication but can also be redeemed for exciting prizes and recognition within our community.
+								</p>
+								<p>
+									Whether you're a seasoned mathematician or just starting your journey, POTW offers a fun and engaging way to sharpen your skills, think creatively, and connect with fellow problem solvers. Submit your solutions, track your progress, and climb the leaderboard!
+								</p>
+								<p className="font-semibold">
+									Challenge yourself weekly and watch your mathematical prowess grow!
+								</p>
+							</CardContent>
+						</Card>
+					</div>
+				);
+
+			default:
+				return null;
+		}
+	};
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
@@ -70,127 +192,52 @@ export default function ProblemOfTheWeek() {
 				subtitle="Challenge the current problem, and receive recognition! Take part in these problems consistently to redeem prizes."
 				backgroundImage="https://img.lovepik.com/bg/20240224/3D-Rendered-Technological-Dark-Toned-Tech-Waves-with-Polygons-and_3695383_wh1200.jpg"
 			/>
-			<section className="mx-auto max-w-6xl px-4 py-10">
-				<Tabs defaultValue="homebase" className="w-full">
-					<TabsList className="mb-6">
-						<TabsTrigger value="homebase">POTW Homebase</TabsTrigger>
-						<TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-						<TabsTrigger value="information">Information</TabsTrigger>
-					</TabsList>
 
-					<TabsContent value="homebase">
-						<div className="mx-auto max-w-3xl">
-							<header className="mb-6">
-								<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
-								<p className="mt-1 text-sm text-gray-500">
-									Problem of the Week • {new Date(puzzle.date).toLocaleDateString()}
-									{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
-								</p>
-
-								<div className="mt-4 flex gap-3">
-									<Link
-										to="/problem-of-the-week/archive"
-										className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+			<div className="py-8">
+				<div className="container mx-auto px-4">
+					<div className="flex flex-col gap-8 lg:flex-row">
+						{/* Sidebar */}
+						<div className="lg:w-1/4">
+							<div className="sticky top-8 rounded-lg bg-white p-6 shadow-md">
+								<h3 className="mb-4 text-lg font-semibold text-gray-800">
+									POTW Sections
+								</h3>
+								<div className="space-y-2">
+									<Button
+										variant={activeSection === "homebase" ? "default" : "ghost"}
+										className="w-full justify-start"
+										onClick={() => setActiveSection("homebase")}
 									>
-										See Archives
-									</Link>
-
-									{puzzle?.id !== potwID && (
-										<Link
-											to="/problem-of-the-week"
-											className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-										>
-											Current POTW
-										</Link>
-									)}
+										POTW Homebase
+									</Button>
+									<Button
+										variant={activeSection === "leaderboard" ? "default" : "ghost"}
+										className="w-full justify-start"
+										onClick={() => setActiveSection("leaderboard")}
+									>
+										Leaderboard
+									</Button>
+									<Button
+										variant={activeSection === "information" ? "default" : "ghost"}
+										className="w-full justify-start"
+										onClick={() => setActiveSection("information")}
+									>
+										Information
+									</Button>
 								</div>
-							</header>
-
-							{puzzle.image && (
-								<img
-									src={withBase(puzzle.image!)}
-									alt={puzzle.title}
-									className="mb-6 w-full rounded-lg border object-contain"
-								/>
-							)}
-
-							<p className="mb-8 whitespace-pre-wrap text-gray-800">
-								{puzzle.prompt}
-							</p>
-
-							<SubmissionForm puzzleId={puzzle.id} />
-						</div>
-					</TabsContent>
-
-					<TabsContent value="leaderboard">
-						<div className="mx-auto max-w-4xl">
-							<h2 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h2>
-							
-							<div className="grid gap-6 md:grid-cols-2 mb-8">
-								<Card>
-									<CardHeader>
-										<CardTitle>POTW's Solved</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-4xl font-bold text-primary">0</p>
-										<p className="text-sm text-muted-foreground mt-2">Total problems completed</p>
-									</CardContent>
-								</Card>
-
-								<Card>
-									<CardHeader>
-										<CardTitle>Coins</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-4xl font-bold text-primary">0</p>
-										<p className="text-sm text-muted-foreground mt-2">Earned from completions</p>
-									</CardContent>
-								</Card>
 							</div>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>More Data</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<ul className="space-y-2 list-disc list-inside text-gray-700">
-										<li>Current streak: [Placeholder]</li>
-										<li>Longest streak: [Placeholder]</li>
-										<li>Average difficulty: [Placeholder]</li>
-										<li>First submission date: [Placeholder]</li>
-										<li>Most recent submission: [Placeholder]</li>
-										<li>Success rate: [Placeholder]</li>
-									</ul>
-								</CardContent>
-							</Card>
 						</div>
-					</TabsContent>
 
-					<TabsContent value="information">
-						<div className="mx-auto max-w-3xl">
-							<Card>
-								<CardHeader>
-									<CardTitle>About Problem of the Week</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4 text-gray-700">
-									<p>
-										The Problem of the Week (POTW) is a weekly mathematical challenge designed to test your problem-solving skills and mathematical reasoning. Each week, we present a new puzzle that ranges in difficulty from beginner to advanced levels.
-									</p>
-									<p>
-										By participating consistently, you can earn coins and build your streak. These achievements not only showcase your dedication but can also be redeemed for exciting prizes and recognition within our community.
-									</p>
-									<p>
-										Whether you're a seasoned mathematician or just starting your journey, POTW offers a fun and engaging way to sharpen your skills, think creatively, and connect with fellow problem solvers. Submit your solutions, track your progress, and climb the leaderboard!
-									</p>
-									<p className="font-semibold">
-										Challenge yourself weekly and watch your mathematical prowess grow!
-									</p>
-								</CardContent>
-							</Card>
+						{/* Main Content */}
+						<div className="lg:w-3/4">
+							<div className="rounded-lg bg-white p-8 shadow-md">
+								{renderContent()}
+							</div>
 						</div>
-					</TabsContent>
-				</Tabs>
-			</section>
+					</div>
+				</div>
+			</div>
+
 			<Footer />
 		</div>
 	);
