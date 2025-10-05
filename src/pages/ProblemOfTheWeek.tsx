@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchPuzzles, withBase, apiUrl, Puzzle } from "@/lib/utils";
 import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
 
@@ -68,48 +70,127 @@ export default function ProblemOfTheWeek() {
 				subtitle="Challenge the current problem, and receive recognition! Take part in these problems consistently to redeem prizes."
 				backgroundImage="https://img.lovepik.com/bg/20240224/3D-Rendered-Technological-Dark-Toned-Tech-Waves-with-Polygons-and_3695383_wh1200.jpg"
 			/>
-			<section className="mx-auto max-w-3xl px-4 py-10">
-				<header className="mb-6">
-					<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
-					<p className="mt-1 text-sm text-gray-500">
-						Problem of the Week • {new Date(puzzle.date).toLocaleDateString()}
-						{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
-					</p>
+			<section className="mx-auto max-w-6xl px-4 py-10">
+				<Tabs defaultValue="homebase" className="w-full">
+					<TabsList className="mb-6">
+						<TabsTrigger value="homebase">POTW Homebase</TabsTrigger>
+						<TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+						<TabsTrigger value="information">Information</TabsTrigger>
+					</TabsList>
 
-					<div className="mt-4 flex gap-3">
-						<Link
-							to="/problem-of-the-week/archive"
-							className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-						>
-							See Archives
-						</Link>
+					<TabsContent value="homebase">
+						<div className="mx-auto max-w-3xl">
+							<header className="mb-6">
+								<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
+								<p className="mt-1 text-sm text-gray-500">
+									Problem of the Week • {new Date(puzzle.date).toLocaleDateString()}
+									{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
+								</p>
 
-						{puzzle?.id !== potwID && (
-							<Link
-								to="/problem-of-the-week"
-								className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-							>
-								Current POTW
-							</Link>
-						)}
-					</div>
-				</header>
+								<div className="mt-4 flex gap-3">
+									<Link
+										to="/problem-of-the-week/archive"
+										className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+									>
+										See Archives
+									</Link>
 
-				{puzzle.image && (
-					<img
-						src={withBase(puzzle.image!)}
-						alt={puzzle.title}
-						className="mb-6 w-full rounded-lg border object-contain"
-					/>
-				)}
+									{puzzle?.id !== potwID && (
+										<Link
+											to="/problem-of-the-week"
+											className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+										>
+											Current POTW
+										</Link>
+									)}
+								</div>
+							</header>
 
-				<p className="mb-8 whitespace-pre-wrap text-gray-800">
-					{puzzle.prompt}
-				</p>
+							{puzzle.image && (
+								<img
+									src={withBase(puzzle.image!)}
+									alt={puzzle.title}
+									className="mb-6 w-full rounded-lg border object-contain"
+								/>
+							)}
 
-				<SubmissionForm puzzleId={puzzle.id} />
+							<p className="mb-8 whitespace-pre-wrap text-gray-800">
+								{puzzle.prompt}
+							</p>
+
+							<SubmissionForm puzzleId={puzzle.id} />
+						</div>
+					</TabsContent>
+
+					<TabsContent value="leaderboard">
+						<div className="mx-auto max-w-4xl">
+							<h2 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h2>
+							
+							<div className="grid gap-6 md:grid-cols-2 mb-8">
+								<Card>
+									<CardHeader>
+										<CardTitle>POTW's Solved</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<p className="text-4xl font-bold text-primary">0</p>
+										<p className="text-sm text-muted-foreground mt-2">Total problems completed</p>
+									</CardContent>
+								</Card>
+
+								<Card>
+									<CardHeader>
+										<CardTitle>Coins</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<p className="text-4xl font-bold text-primary">0</p>
+										<p className="text-sm text-muted-foreground mt-2">Earned from completions</p>
+									</CardContent>
+								</Card>
+							</div>
+
+							<Card>
+								<CardHeader>
+									<CardTitle>More Data</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<ul className="space-y-2 list-disc list-inside text-gray-700">
+										<li>Current streak: [Placeholder]</li>
+										<li>Longest streak: [Placeholder]</li>
+										<li>Average difficulty: [Placeholder]</li>
+										<li>First submission date: [Placeholder]</li>
+										<li>Most recent submission: [Placeholder]</li>
+										<li>Success rate: [Placeholder]</li>
+									</ul>
+								</CardContent>
+							</Card>
+						</div>
+					</TabsContent>
+
+					<TabsContent value="information">
+						<div className="mx-auto max-w-3xl">
+							<Card>
+								<CardHeader>
+									<CardTitle>About Problem of the Week</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4 text-gray-700">
+									<p>
+										The Problem of the Week (POTW) is a weekly mathematical challenge designed to test your problem-solving skills and mathematical reasoning. Each week, we present a new puzzle that ranges in difficulty from beginner to advanced levels.
+									</p>
+									<p>
+										By participating consistently, you can earn coins and build your streak. These achievements not only showcase your dedication but can also be redeemed for exciting prizes and recognition within our community.
+									</p>
+									<p>
+										Whether you're a seasoned mathematician or just starting your journey, POTW offers a fun and engaging way to sharpen your skills, think creatively, and connect with fellow problem solvers. Submit your solutions, track your progress, and climb the leaderboard!
+									</p>
+									<p className="font-semibold">
+										Challenge yourself weekly and watch your mathematical prowess grow!
+									</p>
+								</CardContent>
+							</Card>
+						</div>
+					</TabsContent>
+				</Tabs>
 			</section>
-			{/* Footer */}
 			<Footer />
 		</div>
 	);
