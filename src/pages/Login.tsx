@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import Header from "@/components/Header";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,13 +18,43 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { signup, login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLogin) {
-      console.log("Login attempt with:", { email, password });
-    } else {
-      console.log("Signup attempt with:", { name, email, password, confirmPassword, agreeToTerms });
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        navigate("/");
+      } else {
+        if (password !== confirmPassword) {
+          setError("Passwords don't match");
+          return;
+        }
+        if (!agreeToTerms) {
+          setError("Please agree to the terms and conditions");
+          return;
+        }
+        await signup(email, password, name);
+        navigate("/");
+      }
+    } catch (error: any) {
+      // If user doesn't exist or wrong password during login, switch to signup mode
+      if (isLogin && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+        setIsLogin(false);
+        setError(""); // Clear error message when switching to signup
+      } else {
+        setError(error.message || "Authentication failed");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,8 +158,13 @@ const Login = () => {
                   </Label>
                 </div>
               )}
-              <Button type="submit" className="w-full">
-                {isLogin ? "Sign in" : "Sign up"}
+              {error && (
+                <div className="text-red-600 text-sm text-center p-2 bg-red-50 rounded">
+                  {error}
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Loading..." : (isLogin ? "Sign in" : "Sign up")}
               </Button>
             </form>
             <div className="mt-4 text-center text-sm">

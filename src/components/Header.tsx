@@ -1,15 +1,18 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, User, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const location = useLocation();
+  const { currentUser, logout } = useAuth();
 
   const getLinkClasses = (path: string) => {
     const isActive = location.pathname === path;
@@ -71,9 +74,38 @@ const Header = () => {
             <Link to="/contact" className={getLinkClasses("/contact")}>
               Contact Us
             </Link>
-            <Link to="/login" className={getLinkClasses("/login")}>
-              Login
-            </Link>
+            
+            {currentUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex h-10 items-center text-white hover:bg-transparent hover:text-blue-200 px-4 rounded-full transition-all duration-300"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    {currentUser.displayName || currentUser.email?.split('@')[0]}
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="z-50 bg-white text-black">
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="flex items-center">
+                      <User className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/login" className={getLinkClasses("/login")}>
+                Login
+              </Link>
+            )}
           </nav>
         </div>
       </div>

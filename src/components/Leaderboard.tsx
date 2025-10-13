@@ -1,69 +1,127 @@
+import React, { useEffect, useState } from 'react';
+import { potwService, POTWSubmission } from '@/lib/firestore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Users, Clock } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, Award } from "lucide-react";
+interface LeaderboardProps {
+  puzzleId: string;
+}
 
-const Leaderboard = () => {
-	const topUsers = [
-		{ name: "Alex Chen", score: 2847, rank: 1, streak: 23, avatar: "AC" },
-		{ name: "Sarah Johnson", score: 2756, rank: 2, streak: 18, avatar: "SJ" },
-		{ name: "Marcus Rodriguez", score: 2698, rank: 3, streak: 15, avatar: "MR" },
-		{ name: "Emma Thompson", score: 2634, rank: 4, streak: 12, avatar: "ET" },
-		{ name: "David Kim", score: 2587, rank: 5, streak: 9, avatar: "DK" },
-	];
+export default function Leaderboard({ puzzleId }: LeaderboardProps) {
+  const [submissions, setSubmissions] = useState<POTWSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
 
-	const getRankIcon = (rank: number) => {
-		switch (rank) {
-			case 1:
-				return <Trophy className="h-5 w-5 text-yellow-500" />;
-			case 2:
-				return <Medal className="h-5 w-5 text-gray-400" />;
-			case 3:
-				return <Award className="h-5 w-5 text-amber-600" />;
-			default:
-				return <span className="text-lg font-bold text-gray-600">#{rank}</span>;
-		}
-	};
+  useEffect(() => {
+    // Subscribe to real-time updates
+    const unsubscribe = potwService.subscribeToPuzzleSubmissions(
+      puzzleId,
+      (newSubmissions) => {
+        setSubmissions(newSubmissions);
+        setLoading(false);
+      }
+    );
 
-	return (
-		<section id="leaderboard" className="mb-12">
-			<h2 className="mb-6 text-3xl font-bold text-gray-800">Club Leaderboard</h2>
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center space-x-2">
-						<Trophy className="h-5 w-5 text-yellow-500" />
-						<span>Top Performers This Month</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-4">
-						{topUsers.map((user) => (
-							<div key={user.rank} className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100">
-								<div className="flex items-center space-x-4">
-									<div className="flex w-8 items-center justify-center">
-										{getRankIcon(user.rank)}
-									</div>
-									<Avatar className="h-10 w-10">
-										<AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-											{user.avatar}
-										</AvatarFallback>
-									</Avatar>
-									<div>
-										<h3 className="font-semibold text-gray-800">{user.name}</h3>
-										<p className="text-sm text-gray-600">{user.streak} day streak</p>
-									</div>
-								</div>
-								<Badge variant="outline" className="px-3 py-1 text-lg font-bold">
-									{user.score.toLocaleString()} pts
-								</Badge>
-							</div>
-						))}
-					</div>
-				</CardContent>
-			</Card>
-		</section>
-	);
-};
+    return () => unsubscribe();
+  }, [puzzleId]);
 
-export default Leaderboard;
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Live Leaderboard
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Loading submissions...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-yellow-500" />
+          Live Leaderboard
+          <Badge variant="secondary" className="ml-auto">
+            <Users className="h-3 w-3 mr-1" />
+            {submissions.length}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {submissions.length === 0 ? (
+          <div className="text-center py-8">
+            <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600">No submissions yet</p>
+            <p className="text-sm text-gray-500 mt-1">Be the first to submit your answer!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {submissions.slice(0, 10).map((submission, index) => (
+              <div
+                key={submission.id}
+                className={`flex items-center justify-between p-3 rounded-lg border ${
+                  index === 0 ? 'bg-yellow-50 border-yellow-200' : 
+                  index === 1 ? 'bg-gray-50 border-gray-200' : 
+                  index === 2 ? 'bg-orange-50 border-orange-200' : 
+                  'bg-white border-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                    index === 0 ? 'bg-yellow-500 text-white' :
+                    index === 1 ? 'bg-gray-400 text-white' :
+                    index === 2 ? 'bg-orange-500 text-white' :
+                    'bg-gray-200 text-gray-700'
+                  }`}>
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {submission.userName}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {submission.userEmail}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    {submission.createdAt?.toDate().toLocaleDateString()}
+                  </div>
+                  {submission.isCorrect && (
+                    <Badge variant="default" className="mt-1 bg-green-500">
+                      Correct
+                    </Badge>
+                  )}
+                  {submission.score && (
+                    <Badge variant="outline" className="mt-1">
+                      {submission.score} pts
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {submissions.length > 10 && (
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-500">
+                  And {submissions.length - 10} more submissions...
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -6,6 +6,9 @@ import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { potwService } from '@/lib/firestore';
+import { useAuth } from '@/contexts/AuthContext';
+import Leaderboard from '@/components/Leaderboard';
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
 
@@ -105,52 +108,23 @@ export default function ProblemOfTheWeek() {
 							{puzzle.prompt}
 						</p>
 
-						<SubmissionForm puzzleId={puzzle.id} />
+						<SubmissionForm puzzleId={puzzle.id} puzzleName={puzzle.title} />
 					</div>
 				);
 
 			case "leaderboard":
 				return (
 					<div className="space-y-6">
-						<h2 className="text-2xl font-bold text-gray-900 mb-6">Your Profile</h2>
-						
-						<div className="grid gap-6 md:grid-cols-2 mb-8">
-							<Card>
-								<CardHeader>
-									<CardTitle>POTW's Solved</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-4xl font-bold text-primary">0</p>
-									<p className="text-sm text-muted-foreground mt-2">Total problems completed</p>
-								</CardContent>
-							</Card>
+						<header className="mb-6">
+							<h1 className="text-3xl font-bold text-gray-900">
+								Live Leaderboard
+							</h1>
+							<p className="mt-1 text-sm text-gray-500">
+								Real-time submissions for "{puzzle.title}"
+							</p>
+						</header>
 
-							<Card>
-								<CardHeader>
-									<CardTitle>Coins</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-4xl font-bold text-primary">0</p>
-									<p className="text-sm text-muted-foreground mt-2">Earned from completions</p>
-								</CardContent>
-							</Card>
-						</div>
-
-						<Card>
-							<CardHeader>
-								<CardTitle>More Data</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2 list-disc list-inside text-gray-700">
-									<li>Current streak: [Placeholder]</li>
-									<li>Longest streak: [Placeholder]</li>
-									<li>Average difficulty: [Placeholder]</li>
-									<li>First submission date: [Placeholder]</li>
-									<li>Most recent submission: [Placeholder]</li>
-									<li>Success rate: [Placeholder]</li>
-								</ul>
-							</CardContent>
-						</Card>
+						<Leaderboard puzzleId={puzzle.id} />
 					</div>
 				);
 
@@ -243,9 +217,8 @@ export default function ProblemOfTheWeek() {
 	);
 }
 
-function SubmissionForm({ puzzleId }: { puzzleId: string }) {
-	const [name, setName] = useState("");
-	const [email, setEmail] = useState("");
+function SubmissionForm({ puzzleId, puzzleName }: { puzzleId: string; puzzleName: string }) {
+	const { currentUser } = useAuth();
 	const [answer, setAnswer] = useState("");
 	const [submitted, setSubmitted] = useState(false);
 	const [status, setStatus] = useState<
@@ -254,19 +227,26 @@ function SubmissionForm({ puzzleId }: { puzzleId: string }) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		setSubmitted(localStorage.getItem(SUBMIT_KEY(puzzleId)) === "1");
-	}, [puzzleId]);
+		// Check if user already submitted this puzzle
+		const checkSubmission = async () => {
+			if (currentUser) {
+				try {
+					const existingSubmission = await potwService.getUserSubmission(puzzleId, currentUser.uid);
+					setSubmitted(!!existingSubmission);
+				} catch (error) {
+					console.error('Error checking submission:', error);
+				}
+			}
+		};
+		checkSubmission();
+	}, [puzzleId, currentUser]);
 
 	const onSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (submitted) return;
+		if (submitted || !currentUser) return;
 
-		if (!name.trim() || !email.trim() || !answer.trim()) {
-			setError("Please fill in your name, email, and answer!");
-			return;
-		}
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-			setError("Please enter a valid email address!");
+		if (!answer.trim()) {
+			setError("Please provide your answer!");
 			return;
 		}
 
@@ -274,9 +254,14 @@ function SubmissionForm({ puzzleId }: { puzzleId: string }) {
 			setStatus("submitting");
 			setError(null);
 
-			await submit({ puzzleId, name, email, answer });
+			await submit({ 
+				puzzleId, 
+				puzzleName,
+				name: currentUser.displayName || "Anonymous", 
+				email: currentUser.email || "", 
+				answer 
+			}, currentUser.uid);
 
-			localStorage.setItem(SUBMIT_KEY(puzzleId), "1");
 			setSubmitted(true);
 			setStatus("success");
 		} catch (e: unknown) {
@@ -289,50 +274,57 @@ function SubmissionForm({ puzzleId }: { puzzleId: string }) {
 		<div className="rounded-xl border p-4">
 			<h2 className="mb-3 text-lg font-semibold">Submit your answer</h2>
 
-			{submitted ? (
-				<p className="text-green-600">
-					You have already attempted this puzzle.
-				</p>
+			{!currentUser ? (
+				<div className="text-center py-8">
+					<p className="text-gray-600 mb-4">Please log in to submit your answer.</p>
+					<Link 
+						to="/login" 
+						className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700"
+					>
+						Login to Submit
+					</Link>
+				</div>
+			) : submitted ? (
+				<div className="text-center py-4">
+					<p className="text-green-600 font-medium">
+						✅ You have already submitted your answer for this puzzle!
+					</p>
+					<p className="text-sm text-gray-600 mt-2">
+						Thank you for participating in the Problem of the Week!
+					</p>
+				</div>
 			) : (
-				<form onSubmit={onSubmit} className="space-y-3">
-					<div className="grid gap-3 sm:grid-cols-2">
-						<input
-							type="text"
-							placeholder="Your name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							className="w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
-						/>
-						<input
-							type="email"
-							placeholder="you@example.com"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							className="w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
-						/>
+				<div>
+					<div className="mb-4 p-3 bg-blue-50 rounded-lg">
+						<p className="text-sm text-blue-800">
+							<strong>Logged in as:</strong> {currentUser.displayName || currentUser.email}
+						</p>
 					</div>
+					
+					<form onSubmit={onSubmit} className="space-y-3">
+						<textarea
+							placeholder="Your solution / reasoning"
+							value={answer}
+							onChange={(e) => setAnswer(e.target.value)}
+							className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
+							required
+						/>
 
-					<textarea
-						placeholder="Your solution / reasoning"
-						value={answer}
-						onChange={(e) => setAnswer(e.target.value)}
-						className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
-					/>
-
-					<div className="flex items-center gap-3">
-						<button
-							type="submit"
-							disabled={status === "submitting"}
-							className="rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
-						>
-							{status === "submitting" ? "Submitting…" : "Submit"}
-						</button>
-						{error && <span className="text-sm text-red-600">{error}</span>}
-						{status === "success" && (
-							<span className="text-sm text-green-600">Submitted!</span>
-						)}
-					</div>
-				</form>
+						<div className="flex items-center gap-3">
+							<button
+								type="submit"
+								disabled={status === "submitting"}
+								className="rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+							>
+								{status === "submitting" ? "Submitting…" : "Submit Answer"}
+							</button>
+							{error && <span className="text-sm text-red-600">{error}</span>}
+							{status === "success" && (
+								<span className="text-sm text-green-600">✅ Submitted successfully!</span>
+							)}
+						</div>
+					</form>
+				</div>
 			)}
 			<p className="mt-2 text-xs text-gray-500">
 				IMPORTANT: You can only submit an answer once!
@@ -343,23 +335,31 @@ function SubmissionForm({ puzzleId }: { puzzleId: string }) {
 
 async function submit(payload: {
 	puzzleId: string;
+	puzzleName: string;
 	name: string;
 	email: string;
 	answer: string;
-}): Promise<{ ok: boolean; duplicate?: boolean }> {
-	const res = await fetch(apiUrl("/api/potw/submit"), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(payload),
-	});
+}, userId: string): Promise<{ ok: boolean; duplicate?: boolean }> {
+	try {
+		// Check if user already submitted
+		const existingSubmission = await potwService.getUserSubmission(payload.puzzleId, userId);
+		if (existingSubmission) {
+			return { ok: true, duplicate: true };
+		}
 
-	const ct = res.headers.get("content-type") || "";
-	if (!ct.includes("application/json")) {
-		const text = await res.text();
-		throw new Error(`Unexpected response: ${res.status}. ${text.slice(0, 200)}`);
+		// Submit to Firestore
+		await potwService.submitAnswer({
+			puzzleId: payload.puzzleId,
+			puzzleName: payload.puzzleName,
+			userId: userId,
+			userName: payload.name,
+			userEmail: payload.email,
+			answer: payload.answer,
+		});
+
+		return { ok: true };
+	} catch (error) {
+		console.error('Submission error:', error);
+		throw new Error('Submission failed');
 	}
-
-	const data = await res.json();
-	if (!res.ok && !data?.ok) throw new Error(data?.error || "Submission failed");
-	return data;
 }
