@@ -1,14 +1,15 @@
 import Header from "@/components/Header";
 import PageHeader from "@/components/PageHeader";
 import { useEffect, useMemo, useState } from "react";
-import { fetchPuzzles, withBase, apiUrl, Puzzle } from "@/lib/utils";
+import { withBase, apiUrl, Puzzle } from "@/lib/utils";
 import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { potwService } from '@/lib/firestore';
+import { potwService, puzzleService } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import Leaderboard from '@/components/Leaderboard';
+import CountdownTimer from '@/components/CountdownTimer';
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
 
@@ -35,6 +36,7 @@ function getStars(n: number): string {
 
 export default function ProblemOfTheWeek() {
 	const { id } = useParams<{ id?: string }>();
+	const { currentUser } = useAuth();
 	const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -44,9 +46,27 @@ export default function ProblemOfTheWeek() {
 		(async () => {
 			try {
 				setLoading(true);
-				setPuzzles(await fetchPuzzles());
+				// Try to get active puzzle from Firebase first
+				const activePuzzle = await puzzleService.getCurrentActivePuzzle();
+
+				if (activePuzzle) {
+					setPuzzles([activePuzzle]);
+				} else {
+					// Fallback to static puzzles if no active puzzle
+					const { fetchPuzzles } = await import("@/lib/utils");
+					const staticPuzzles = await fetchPuzzles();
+					setPuzzles(staticPuzzles);
+				}
 			} catch (e: unknown) {
-				setError(getErrorMessage(e));
+				console.error('Error loading puzzles:', e);
+				// Fallback to static puzzles on error
+				try {
+					const { fetchPuzzles } = await import("@/lib/utils");
+					const staticPuzzles = await fetchPuzzles();
+					setPuzzles(staticPuzzles);
+				} catch (fallbackError) {
+					setError(getErrorMessage(fallbackError));
+				}
 			} finally {
 				setLoading(false);
 			}
@@ -71,27 +91,26 @@ export default function ProblemOfTheWeek() {
 				return (
 					<div className="space-y-6">
 						<header className="mb-6">
-							<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
-							<p className="mt-1 text-sm text-gray-500">
-								Problem of the Week • {new Date(puzzle.date).toLocaleDateString()}
-								{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
-							</p>
-
-							<div className="mt-4 flex gap-3">
-								<Link
-									to="/problem-of-the-week/archive"
-									className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-								>
-									See Archives
-								</Link>
-
-								{puzzle?.id !== potwID && (
-									<Link
-										to="/problem-of-the-week"
-										className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
-									>
-										Current POTW
-									</Link>
+							<div className="flex items-start justify-between">
+								<div className="flex-1">
+									<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
+									<p className="mt-1 text-sm text-gray-500">
+										Problem of the Week • {puzzle.createdAt ? new Date(puzzle.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+										{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
+									</p>
+								</div>
+								
+								{/* Countdown Timer */}
+								{puzzle.expiresAt && (
+									<div className="ml-4">
+										<CountdownTimer 
+											expiresAt={new Date(puzzle.expiresAt.seconds * 1000)}
+											onExpired={() => {
+												// Optionally refresh the page or show expired message
+												console.log('Puzzle has expired!');
+											}}
+										/>
+									</div>
 								)}
 							</div>
 						</header>
@@ -108,7 +127,7 @@ export default function ProblemOfTheWeek() {
 							{puzzle.prompt}
 						</p>
 
-						<SubmissionForm puzzleId={puzzle.id} puzzleName={puzzle.title} />
+						<SubmissionForm puzzleId={puzzle.id} puzzleName={puzzle.title} puzzle={puzzle} />
 					</div>
 				);
 
@@ -217,7 +236,7 @@ export default function ProblemOfTheWeek() {
 	);
 }
 
-function SubmissionForm({ puzzleId, puzzleName }: { puzzleId: string; puzzleName: string }) {
+function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; puzzleName: string; puzzle: Puzzle }) {
 	const { currentUser } = useAuth();
 	const [answer, setAnswer] = useState("");
 	const [submitted, setSubmitted] = useState(false);
@@ -244,6 +263,12 @@ function SubmissionForm({ puzzleId, puzzleName }: { puzzleId: string; puzzleName
 	const onSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (submitted || !currentUser) return;
+
+		// Check if puzzle has expired
+		if (puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000)) {
+			setError("This puzzle has expired! Submissions are no longer accepted.");
+			return;
+		}
 
 		if (!answer.trim()) {
 			setError("Please provide your answer!");
@@ -272,7 +297,6 @@ function SubmissionForm({ puzzleId, puzzleName }: { puzzleId: string; puzzleName
 
 	return (
 		<div className="rounded-xl border p-4">
-			<h2 className="mb-3 text-lg font-semibold">Submit your answer</h2>
 
 			{!currentUser ? (
 				<div className="text-center py-8">
@@ -293,14 +317,17 @@ function SubmissionForm({ puzzleId, puzzleName }: { puzzleId: string; puzzleName
 						Thank you for participating in the Problem of the Week!
 					</p>
 				</div>
+			) : puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000) ? (
+				<div className="text-center py-4">
+					<p className="text-red-600 font-medium">
+						⏰ This puzzle has expired!
+					</p>
+					<p className="text-sm text-gray-600 mt-2">
+						Submissions are no longer accepted for this puzzle.
+					</p>
+				</div>
 			) : (
 				<div>
-					<div className="mb-4 p-3 bg-blue-50 rounded-lg">
-						<p className="text-sm text-blue-800">
-							<strong>Logged in as:</strong> {currentUser.displayName || currentUser.email}
-						</p>
-					</div>
-					
 					<form onSubmit={onSubmit} className="space-y-3">
 						<textarea
 							placeholder="Your solution / reasoning"

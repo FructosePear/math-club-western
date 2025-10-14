@@ -5,6 +5,7 @@ import {
   getDocs, 
   getDoc, 
   updateDoc, 
+  setDoc,
   deleteDoc, 
   query, 
   where, 
@@ -36,14 +37,17 @@ export interface UserProfile {
   email: string;
   displayName: string;
   createdAt: Timestamp;
-  lastLogin: Timestamp;
   totalSubmissions?: number;
   correctSubmissions?: number;
   averageScore?: number;
+  role?: 'user' | 'admin' | 'superadmin';
+  // Firebase Auth fields (read-only)
+  emailVerified?: boolean;
+  firebaseCreatedAt?: Timestamp;
 }
 
 export interface Puzzle {
-  id: string;
+  id?: string;
   title: string;
   date: string;
   image?: string;
@@ -51,6 +55,10 @@ export interface Puzzle {
   difficulty: number;
   correctAnswer?: string;
   solution?: string;
+  createdAt: Timestamp;
+  createdBy: string;
+  isActive: boolean;
+  expiresAt?: Timestamp; // New field for expiration date
 }
 
 // POTW Submissions
@@ -140,24 +148,26 @@ export const userService = {
   async createOrUpdateUser(user: Omit<UserProfile, 'id'>): Promise<string> {
     try {
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        ...user,
-        lastLogin: serverTimestamp(),
-      });
-      return user.uid;
-    } catch (error) {
-      // If document doesn't exist, create it
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        // Update existing user
+        await updateDoc(userRef, {
+          ...user,
+          lastLogin: serverTimestamp(),
+        });
+      } else {
+        // Create new user
+        await setDoc(userRef, {
           ...user,
           createdAt: serverTimestamp(),
           lastLogin: serverTimestamp(),
         });
-        return user.uid;
-      } catch (createError) {
-        console.error('Error creating/updating user:', createError);
-        throw createError;
       }
+      return user.uid;
+    } catch (error) {
+      console.error('Error creating/updating user:', error);
+      throw error;
     }
   },
 
@@ -212,10 +222,36 @@ export const userService = {
       console.error('Error updating user stats:', error);
       throw error;
     }
+  },
+
+  // Get all users (admin only)
+  async getAllUsers(): Promise<UserProfile[]> {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      throw error;
+    }
+  },
+
+  // Update user role (admin only)
+  async updateUserRole(uid: string, role: 'user' | 'admin' | 'superadmin'): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        role: role,
+      });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      throw error;
+    }
   }
 };
 
-// Puzzles (you can move your static puzzles to Firestore later)
+// Puzzles Management
 export const puzzleService = {
   // Get all puzzles
   async getPuzzles(): Promise<Puzzle[]> {
@@ -232,6 +268,51 @@ export const puzzleService = {
     }
   },
 
+  // Get active puzzles only
+  async getActivePuzzles(): Promise<Puzzle[]> {
+    try {
+      const q = query(
+        collection(db, 'puzzles'),
+        where('isActive', '==', true),
+        orderBy('date', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Puzzle[];
+    } catch (error) {
+      console.error('Error getting active puzzles:', error);
+      return [];
+    }
+  },
+
+  // Get current active puzzle (only one should be active)
+  async getCurrentActivePuzzle(): Promise<Puzzle | null> {
+    try {
+      // Simple query - just get active puzzles (no sorting, no index needed)
+      const q = query(
+        collection(db, 'puzzles'),
+        where('isActive', '==', true)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      // Return the first active puzzle (you should only have one active anyway)
+      const doc = querySnapshot.docs[0];
+      return {
+        id: doc.id,
+        ...doc.data()
+      } as Puzzle;
+    } catch (error) {
+      console.error('Error getting current active puzzle:', error);
+      return null;
+    }
+  },
+
   // Get specific puzzle
   async getPuzzle(puzzleId: string): Promise<Puzzle | null> {
     try {
@@ -243,6 +324,63 @@ export const puzzleService = {
     } catch (error) {
       console.error('Error getting puzzle:', error);
       return null;
+    }
+  },
+
+  // Create new puzzle (admin only)
+  async createPuzzle(puzzle: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy'>, createdBy: string): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'puzzles'), {
+        ...puzzle,
+        createdAt: serverTimestamp(),
+        createdBy: createdBy,
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating puzzle:', error);
+      throw error;
+    }
+  },
+
+  // Update puzzle (admin only)
+  async updatePuzzle(puzzleId: string, updates: Partial<Puzzle>): Promise<void> {
+    try {
+      const puzzleRef = doc(db, 'puzzles', puzzleId);
+      await updateDoc(puzzleRef, updates);
+    } catch (error) {
+      console.error('Error updating puzzle:', error);
+      throw error;
+    }
+  },
+
+  // Set puzzle as active and deactivate all others
+  async setPuzzleActive(puzzleId: string): Promise<void> {
+    try {
+      // First, deactivate all puzzles
+      const allPuzzlesQuery = query(collection(db, 'puzzles'));
+      const allPuzzlesSnapshot = await getDocs(allPuzzlesQuery);
+      
+      const deactivatePromises = allPuzzlesSnapshot.docs.map(doc => 
+        updateDoc(doc.ref, { isActive: false })
+      );
+      await Promise.all(deactivatePromises);
+      
+      // Then, activate the selected puzzle
+      const puzzleRef = doc(db, 'puzzles', puzzleId);
+      await updateDoc(puzzleRef, { isActive: true });
+    } catch (error) {
+      console.error('Error setting puzzle active:', error);
+      throw error;
+    }
+  },
+
+  // Delete puzzle (admin only)
+  async deletePuzzle(puzzleId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'puzzles', puzzleId));
+    } catch (error) {
+      console.error('Error deleting puzzle:', error);
+      throw error;
     }
   }
 };

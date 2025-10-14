@@ -16,7 +16,11 @@ import EventReview2025 from "./pages/events/EventReview2025";
 import ProblemOfTheWeek from "./pages/ProblemOfTheWeek";
 import POTWArchive from "./pages/POTWArchive";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import UserDashboard from "./pages/UserDashboard";
+import AdminPuzzles from "./pages/AdminPuzzles";
+import AdminUsers from "./pages/AdminUsers";
+import Terms from "./pages/Terms";
 
 const App = () => {
 	const [queryClient] = useState(() => new QueryClient());
@@ -42,8 +46,12 @@ const App = () => {
 							<Route path="/problem-of-the-week/archive" element={<POTWArchive />} />
 							<Route path="/contact" element={<Contact />} />
 							<Route path="/login" element={<Login />} />
+							<Route path="/forgot-password" element={<ForgotPassword />} />
 							<Route path="/dashboard" element={<UserDashboard />} />
-							<Route path="*" element={<NotFound />} />
+              <Route path="/admin/puzzles" element={<AdminPuzzles />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="*" element={<NotFound />} />
 						</Routes>
 					</BrowserRouter>
 				</AuthProvider>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import SignupSuccessModal from "@/components/SignupSuccessModal";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -20,19 +21,70 @@ const Login = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const { signup, login } = useAuth();
+  const { signup, login, resendVerification, currentUser } = useAuth();
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
   const navigate = useNavigate();
+
+  // Check for verification success in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('verified') === 'true') {
+      setSuccess("✅ Email verified successfully! You can now log in below.");
+      setIsLogin(true); // Switch to login mode
+      // Clear the URL parameters after showing the message
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 3000);
+    }
+  }, []);
+
+  // Redirect if user is already logged in and email is verified
+  useEffect(() => {
+    if (currentUser && currentUser.emailVerified) {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
+
+  // Show loading while redirecting (but only if email is verified)
+  if (currentUser && currentUser.emailVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Header />
+        <div className="flex items-center justify-center px-4 py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Redirecting...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
       if (isLogin) {
-        await login(email, password);
-        navigate("/");
+        const user = await login(email, password);
+        // Check if email is verified after login
+        if (user && !user.emailVerified) {
+          setError("Please verify your email before logging in. Check your inbox and spam folder for a verification email.");
+          setShowResendButton(true);
+          // Log out the user since they're not verified
+          await logout();
+          return;
+        }
+        // Only navigate if email is verified
+        if (user && user.emailVerified) {
+          navigate("/");
+        }
       } else {
         if (password !== confirmPassword) {
           setError("Passwords don't match");
@@ -42,14 +94,31 @@ const Login = () => {
           setError("Please agree to the terms and conditions");
           return;
         }
-        await signup(email, password, name);
-        navigate("/");
+               const result = await signup(email, password, name);
+               if (result.success) {
+                 setSignupEmail(email);
+                 setShowSuccessModal(true);
+                 // Clear the form and any errors
+                 setEmail("");
+                 setPassword("");
+                 setConfirmPassword("");
+                 setName("");
+                 setAgreeToTerms(false);
+                 setError("");
+                 setSuccess("");
+               }
       }
     } catch (error: any) {
-      // If user doesn't exist or wrong password during login, switch to signup mode
-      if (isLogin && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
-        setIsLogin(false);
-        setError(""); // Clear error message when switching to signup
+      // Handle different error types
+      if (isLogin) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          setIsLogin(false);
+          setError(""); // Clear error message when switching to signup
+        } else if (error.code === 'auth/too-many-requests') {
+          setError("Too many failed attempts. Please try again later or reset your password.");
+        } else {
+          setError(error.message || "Authentication failed");
+        }
       } else {
         setError(error.message || "Authentication failed");
       }
@@ -154,15 +223,40 @@ const Login = () => {
                     htmlFor="terms"
                     className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    I agree to the terms and conditions
+                    I agree to the{" "}
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      className="text-blue-600 hover:underline"
+                    >
+                      terms and conditions
+                    </Link>
                   </Label>
                 </div>
               )}
-              {error && (
-                <div className="text-red-600 text-sm text-center p-2 bg-red-50 rounded">
-                  {error}
-                </div>
-              )}
+           {error && (
+             <div className="text-red-600 text-sm text-center p-2 bg-red-50 rounded">
+               <div>{error}</div>
+               {showResendButton && (
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   className="mt-2 text-red-600 border-red-300 hover:bg-red-100"
+                   onClick={async () => {
+                     try {
+                       await resendVerification();
+                       setError("Verification email sent! Please check your inbox and spam folder.");
+                       setShowResendButton(false);
+                     } catch (error) {
+                       setError("Failed to send verification email. Please try again.");
+                     }
+                   }}
+                 >
+                   Resend Verification Email
+                 </Button>
+               )}
+             </div>
+           )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Loading..." : (isLogin ? "Sign in" : "Sign up")}
               </Button>
@@ -177,9 +271,28 @@ const Login = () => {
                 {isLogin ? "Sign up" : "Sign in"}
               </button>
             </div>
+
+            {isLogin && (
+              <div className="mt-2 text-center text-sm">
+                <Link 
+                  to="/forgot-password" 
+                  className="text-blue-600 hover:underline font-medium"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Signup Success Modal */}
+      <SignupSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        userEmail={signupEmail}
+      />
+      
     </div>
   );
 };

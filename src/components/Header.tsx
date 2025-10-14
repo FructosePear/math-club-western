@@ -9,10 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
+import EmailVerificationBanner from "./EmailVerificationBanner";
 
 const Header = () => {
   const location = useLocation();
   const { currentUser, logout } = useAuth();
+  const { canManagePuzzles, canManageUsers } = useAdmin();
 
   const getLinkClasses = (path: string) => {
     const isActive = location.pathname === path;
@@ -23,8 +26,9 @@ const Header = () => {
     }`;
   };
   return (
-    <header className="bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-6">
+    <>
+      <header className="bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <img
@@ -94,6 +98,22 @@ const Header = () => {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+                  {canManagePuzzles && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/puzzles" className="flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        Puzzle Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {canManageUsers && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/users" className="flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        User Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="h-4 w-4 mr-2" />
@@ -109,7 +129,9 @@ const Header = () => {
           </nav>
         </div>
       </div>
-    </header>
+      </header>
+      <EmailVerificationBanner />
+    </>
   );
 };
 

@@ -1,17 +1,14 @@
+import { useAuth } from '@/contexts/AuthContext';
+
 const Footer = () => {
+	const { currentUser } = useAuth();
 	return (
 		<footer className="bg-white">
 			<div className="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
 				<div className="lg:flex lg:items-start lg:gap-8">
-					<div className="flex items-center space-x-3">
-						<img
-							src="https://live.staticflickr.com/65535/54710883758_df5e40760b_b.jpg"
-							alt="Math Club Logo"
-							className="max-h-12 object-contain"
-						/>
-					</div>
   
-					<div className="mt-8 grid grid-cols-2 gap-8 lg:mt-0 lg:grid-cols-5 lg:gap-y-16">
+					{!currentUser && (
+						<div className="mt-8 grid grid-cols-2 gap-8 lg:mt-0 lg:grid-cols-5 lg:gap-y-16">
 						<div className="col-span-2">
 							<div>
 								<h2 className="text-2xl font-bold text-gray-900">Want to sign up for our events?</h2>
@@ -151,7 +148,7 @@ const Footer = () => {
 								</a>
 							</li>
 						</ul>
-					</div>
+					</div>)}
 				</div>
   
 				<div className="mt-8 border-t border-gray-100 pt-8">
