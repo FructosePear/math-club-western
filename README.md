@@ -1,40 +1,37 @@
-# Welcome to your Lovable project
+# Math Club Western
 
-## Project info
+A simple math club website with Problem of the Week challenges.
 
-**URL**: https://lovable.dev/projects/1c65d5f2-4ee9-4c5b-a932-0793aa512a7e
+## Quick Start
 
-## How can I edit this code?
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-There are several ways of editing your application.
+2. **Set up Firebase**
+   - Copy `env.example` to `.env`
+   - Add your Firebase config to `.env`
 
-**Use Lovable**
+3. **Run locally**
+   ```bash
+   npm run dev
+   ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/1c65d5f2-4ee9-4c5b-a932-0793aa512a7e) and start prompting.
+4. **Open** `http://localhost:8080`
 
-Changes made via Lovable will be committed automatically to this repo.
+## Features
 
-**Use your preferred IDE**
+- Problem of the Week with countdown timer
+- User login/signup with email verification
+- Admin panel for puzzle management
+- User dashboard to track submissions
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Tech
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+- React + TypeScript + Vite
+- Firebase Auth + Firestore
+- Tailwind CSS + shadcn/ui
 
 **Edit a file directly in GitHub**
 
@@ -59,15 +56,3 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/1c65d5f2-4ee9-4c5b-a932-0793aa512a7e) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
