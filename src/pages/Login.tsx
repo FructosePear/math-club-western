@@ -257,7 +257,11 @@ const Login = () => {
                )}
              </div>
            )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading || (!isLogin && !agreeToTerms)}
+              >
                 {loading ? "Loading..." : (isLogin ? "Sign in" : "Sign up")}
               </Button>
             </form>
@@ -291,6 +295,7 @@ const Login = () => {
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         userEmail={signupEmail}
+        onSwitchToLogin={() => setIsLogin(true)}
       />
       
     </div>

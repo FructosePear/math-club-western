@@ -48,6 +48,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsSigningUp(true);
       setShouldBlockAuthState(true); // Block auth state changes during signup
       
+      // Validate inputs
+      if (!email || !password || !displayName) {
+        throw new Error('All fields are required');
+      }
+      
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+      
       // Create the user account
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -81,6 +90,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await new Promise(resolve => setTimeout(resolve, 200));
       
       return { success: true };
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw error;
     } finally {
       setIsSigningUp(false);
       setShouldBlockAuthState(false); // Re-enable auth state changes
@@ -132,7 +144,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // If user is logged in but email is not verified, log them out immediately
       if (user && !user.emailVerified) {
-        console.log('User logged in without email verification, logging out...');
         await signOut(auth);
         setCurrentUser(null);
         setLoading(false);

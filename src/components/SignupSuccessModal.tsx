@@ -3,19 +3,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Mail, ArrowRight, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface SignupSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail: string;
+  onSwitchToLogin?: () => void;
 }
 
 const SignupSuccessModal: React.FC<SignupSuccessModalProps> = ({
   isOpen,
   onClose,
-  userEmail
+  userEmail,
+  onSwitchToLogin
 }) => {
+
+  const handleGoToLogin = () => {
+    onClose(); // Close the modal first
+    if (onSwitchToLogin) {
+      // If we have a switch function, use it
+      setTimeout(() => {
+        onSwitchToLogin();
+      }, 100);
+    } else {
+      // Otherwise navigate to login page
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 200);
+    }
+  };
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -23,6 +39,9 @@ const SignupSuccessModal: React.FC<SignupSuccessModalProps> = ({
           <DialogTitle className="text-center text-2xl font-bold text-green-600">
             Account Created Successfully! 🎉
           </DialogTitle>
+          <p className="text-center text-gray-600 mt-2">
+            Welcome to Students United by Mathematics!
+          </p>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
@@ -69,13 +88,11 @@ const SignupSuccessModal: React.FC<SignupSuccessModalProps> = ({
           {/* Action Buttons */}
           <div className="space-y-3">
             <Button
-              asChild
+              onClick={handleGoToLogin}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              <Link to="/login" onClick={onClose}>
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Go to Login Page
-              </Link>
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Go to Login Page
             </Button>
           </div>
 
