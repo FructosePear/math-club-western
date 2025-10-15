@@ -1,6 +1,6 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { userService, UserProfile } from '@/lib/firestore';
-import { useEffect, useState } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
+import { userService, UserProfile } from "@/lib/firestore";
+import { useEffect, useState } from "react";
 
 export const useAdmin = () => {
   const { currentUser } = useAuth();
@@ -20,7 +20,7 @@ export const useAdmin = () => {
         const profile = await userService.getUserProfile(currentUser.uid);
         setUserProfile(profile);
       } catch (error) {
-        console.error('Error loading user profile:', error);
+        console.error("Error loading user profile:", error);
         setUserProfile(null);
       } finally {
         setLoading(false);
@@ -30,8 +30,9 @@ export const useAdmin = () => {
     loadUserProfile();
   }, [currentUser]);
 
-  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'superadmin';
-  const isSuperAdmin = userProfile?.role === 'superadmin';
+  const isAdmin =
+    userProfile?.role === "admin" || userProfile?.role === "superadmin";
+  const isSuperAdmin = userProfile?.role === "superadmin";
 
   return {
     userProfile,
