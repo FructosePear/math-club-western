@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { puzzleService, Puzzle } from '@/lib/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +23,20 @@ const AdminPuzzles: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
+  
+  type PuzzleFormData = {
+    title: string;
+    prompt: string;
+    difficulty: number;
+    correctAnswer: string;
+    solution: string;
+    image: string;
+    isActive: boolean;
+    expiresAt: string;
+  };
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PuzzleFormData>({
     title: '',
     prompt: '',
     difficulty: 3,
@@ -32,7 +44,7 @@ const AdminPuzzles: React.FC = () => {
     solution: '',
     image: '',
     isActive: true,
-    expiresAt: '', // New field for expiration date
+    expiresAt: '',
   });
 
   useEffect(() => {
@@ -58,28 +70,45 @@ const AdminPuzzles: React.FC = () => {
     try {
       if (editingPuzzle) {
         // Update existing puzzle
-        const updates = {
-          ...formData,
-          createdBy: currentUser.uid,
+        const updates: Partial<Puzzle> = {
+          title: formData.title,
+          prompt: formData.prompt,
+          difficulty: formData.difficulty,
+          correctAnswer: formData.correctAnswer,
+          solution: formData.solution,
+          image: formData.image,
         };
+        
+        if (formData.expiresAt) {
+          updates.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
+        }
         
         // If activating, use setPuzzleActive to ensure only one is active
         if (formData.isActive && !editingPuzzle.isActive) {
-          await puzzleService.updatePuzzle(editingPuzzle.id!, {
-            ...updates,
-            isActive: false, // Set to false first
-          });
+          await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
           await puzzleService.setPuzzleActive(editingPuzzle.id!);
         } else {
+          updates.isActive = formData.isActive;
           await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
         }
       } else {
         // Create new puzzle
-        const newPuzzleId = await puzzleService.createPuzzle({
-          ...formData,
-          isActive: false, // Create as inactive first
-          expiresAt: formData.expiresAt ? new Date(formData.expiresAt) : undefined,
-        }, currentUser.uid);
+        const puzzleData: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy'> = {
+          title: formData.title,
+          date: new Date().toISOString().split('T')[0],
+          prompt: formData.prompt,
+          difficulty: formData.difficulty,
+          correctAnswer: formData.correctAnswer,
+          solution: formData.solution,
+          image: formData.image,
+          isActive: false,
+        };
+        
+        if (formData.expiresAt) {
+          puzzleData.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
+        }
+        
+        const newPuzzleId = await puzzleService.createPuzzle(puzzleData, currentUser.uid);
         
         // If the puzzle is set to active, use setPuzzleActive to ensure only one is active
         if (formData.isActive) {
@@ -90,13 +119,13 @@ const AdminPuzzles: React.FC = () => {
       // Reset form and reload puzzles
       setFormData({
         title: '',
-        date: '',
         prompt: '',
         difficulty: 3,
         correctAnswer: '',
         solution: '',
         image: '',
         isActive: true,
+        expiresAt: '',
       });
       setEditingPuzzle(null);
       setIsDialogOpen(false);

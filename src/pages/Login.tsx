@@ -77,8 +77,6 @@ const Login = () => {
         if (user && !user.emailVerified) {
           setError("Please verify your email before logging in. Check your inbox and spam folder for a verification email.");
           setShowResendButton(true);
-          // Log out the user since they're not verified
-          await logout();
           return;
         }
         // Only navigate if email is verified

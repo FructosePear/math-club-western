@@ -1,15 +1,16 @@
 import Header from "@/components/Header";
 import PageHeader from "@/components/PageHeader";
 import { useEffect, useMemo, useState } from "react";
-import { withBase, apiUrl, Puzzle } from "@/lib/utils";
+import { withBase } from "@/lib/utils";
 import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { potwService, puzzleService } from '@/lib/firestore';
+import { potwService, puzzleService, Puzzle as FirestorePuzzle } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import Leaderboard from '@/components/Leaderboard';
 import CountdownTimer from '@/components/CountdownTimer';
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
 
@@ -37,36 +38,32 @@ function getStars(n: number): string {
 export default function ProblemOfTheWeek() {
 	const { id } = useParams<{ id?: string }>();
 	const { currentUser } = useAuth();
-	const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null);
+	const [puzzles, setPuzzles] = useState<FirestorePuzzle[] | null>(null);
+	const [allPuzzles, setAllPuzzles] = useState<FirestorePuzzle[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [activeSection, setActiveSection] = useState("homebase");
+	const [expandedPuzzleId, setExpandedPuzzleId] = useState<string | null>(null);
 
 	useEffect(() => {
 		(async () => {
 			try {
 				setLoading(true);
-				// Try to get active puzzle from Firebase first
+				// Get active puzzle
 				const activePuzzle = await puzzleService.getCurrentActivePuzzle();
+				
+				// Get all puzzles for archive
+				const all = await puzzleService.getPuzzles();
+				setAllPuzzles(all);
 
 				if (activePuzzle) {
 					setPuzzles([activePuzzle]);
 				} else {
-					// Fallback to static puzzles if no active puzzle
-					const { fetchPuzzles } = await import("@/lib/utils");
-					const staticPuzzles = await fetchPuzzles();
-					setPuzzles(staticPuzzles);
+					setPuzzles([]);
 				}
 			} catch (e: unknown) {
 				console.error('Error loading puzzles:', e);
-				// Fallback to static puzzles on error
-				try {
-					const { fetchPuzzles } = await import("@/lib/utils");
-					const staticPuzzles = await fetchPuzzles();
-					setPuzzles(staticPuzzles);
-				} catch (fallbackError) {
-					setError(getErrorMessage(fallbackError));
-				}
+				setError(getErrorMessage(e));
 			} finally {
 				setLoading(false);
 			}
@@ -171,6 +168,96 @@ export default function ProblemOfTheWeek() {
 						</Card>
 					</div>
 				);
+			
+			case "archive":
+				return (
+					<div className="space-y-4">
+						<header className="mb-6">
+							<h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
+							<p className="mt-1 text-sm text-gray-500">
+								Browse all past Problem of the Week challenges
+							</p>
+						</header>
+
+						{allPuzzles.length === 0 ? (
+							<div className="text-center py-8 text-gray-500">
+								No puzzles found in the archive.
+							</div>
+						) : (
+							<div className="space-y-2">
+								{allPuzzles.map((p) => (
+									<Card key={p.id} className="overflow-hidden">
+										<button
+											onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
+											className="w-full text-left"
+										>
+											<CardHeader className="pb-3">
+												<div className="flex items-center justify-between">
+													<div className="flex-1">
+														<div className="flex items-center gap-3">
+															<CardTitle className="text-lg">{p.title}</CardTitle>
+															<span className={`text-xs px-2 py-1 rounded ${p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+																{p.isActive ? 'Active' : 'Inactive'}
+															</span>
+														</div>
+														<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+															<span>
+																Released: {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+															</span>
+															<span>
+																Difficulty: {getStars(p.difficulty)}
+															</span>
+															{p.expiresAt && (
+																<span>
+																	Expires: {new Date(p.expiresAt.seconds * 1000).toLocaleDateString()}
+																</span>
+															)}
+														</div>
+													</div>
+													{expandedPuzzleId === p.id ? (
+														<ChevronUp className="h-5 w-5 text-gray-500" />
+													) : (
+														<ChevronDown className="h-5 w-5 text-gray-500" />
+													)}
+												</div>
+											</CardHeader>
+										</button>
+										
+										{expandedPuzzleId === p.id && (
+											<CardContent className="pt-0 border-t">
+												<div className="space-y-4 mt-4">
+													{p.image && (
+														<img
+															src={p.image.startsWith('http') ? p.image : withBase(p.image)}
+															alt={p.title}
+															className="w-full rounded-lg border object-contain max-h-96"
+														/>
+													)}
+													<div>
+														<h4 className="font-semibold text-gray-900 mb-2">Problem Statement:</h4>
+														<p className="whitespace-pre-wrap text-gray-700">{p.prompt}</p>
+													</div>
+													{p.solution && (
+														<div>
+															<h4 className="font-semibold text-gray-900 mb-2">Solution:</h4>
+															<p className="whitespace-pre-wrap text-gray-700">{p.solution}</p>
+														</div>
+													)}
+													{p.correctAnswer && (
+														<div>
+															<h4 className="font-semibold text-gray-900 mb-2">Correct Answer:</h4>
+															<p className="text-gray-700">{p.correctAnswer}</p>
+														</div>
+													)}
+												</div>
+											</CardContent>
+										)}
+									</Card>
+								))}
+							</div>
+						)}
+					</div>
+				);
 
 			default:
 				return null;
@@ -217,6 +304,13 @@ export default function ProblemOfTheWeek() {
 									>
 										Information
 									</Button>
+									<Button
+										variant={activeSection === "archive" ? "default" : "ghost"}
+										className="w-full justify-start"
+										onClick={() => setActiveSection("archive")}
+									>
+										POTW Archive
+									</Button>
 								</div>
 							</div>
 						</div>
@@ -236,7 +330,7 @@ export default function ProblemOfTheWeek() {
 	);
 }
 
-function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; puzzleName: string; puzzle: Puzzle }) {
+function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; puzzleName: string; puzzle: FirestorePuzzle }) {
 	const { currentUser } = useAuth();
 	const [answer, setAnswer] = useState("");
 	const [submitted, setSubmitted] = useState(false);
