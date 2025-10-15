@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Shield, AlertCircle } from 'lucide-react';
+import { User, Shield, AlertCircle, Lock, Unlock, Ban, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { toast } from 'sonner';
 
 const AdminUsers: React.FC = () => {
   const { currentUser } = useAuth();
@@ -62,10 +64,45 @@ const AdminUsers: React.FC = () => {
       if (userProfile && userProfile.uid === uid) {
         setUserProfile({ ...userProfile, role: newRole });
       }
+      
+      toast.success('User role updated successfully');
     } catch (error) {
       console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const toggleFreezeSubmissions = async (uid: string, currentState: boolean) => {
+    try {
+      await userService.toggleFreezeSubmissions(uid, !currentState);
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.uid === uid ? { ...user, freezeSubmissions: !currentState } : user
+      ));
+      
+      toast.success(`Submissions ${!currentState ? 'frozen' : 'unfrozen'} for user`);
+    } catch (error) {
+      console.error('Error toggling freeze submissions:', error);
+      toast.error('Failed to update submission status');
+    }
+  };
+
+  const toggleAccountDisabled = async (uid: string, currentState: boolean) => {
+    try {
+      await userService.toggleAccountDisabled(uid, !currentState);
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.uid === uid ? { ...user, accountDisabled: !currentState } : user
+      ));
+      
+      toast.success(`Account ${!currentState ? 'disabled' : 'enabled'} for user`);
+    } catch (error) {
+      console.error('Error toggling account disabled:', error);
+      toast.error('Failed to update account status');
     }
   };
 
@@ -172,17 +209,17 @@ const AdminUsers: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Submissions</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead>Puzzles Solved</TableHead>
+                    <TableHead>Freeze Submissions</TableHead>
+                    <TableHead>Disable Account</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.uid}>
+                    <TableRow key={user.uid} className={user.accountDisabled ? 'opacity-50' : ''}>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
                           {user.role === 'admin' || user.role === 'superadmin' ? (
@@ -190,46 +227,58 @@ const AdminUsers: React.FC = () => {
                           ) : (
                             <User className="h-4 w-4 text-gray-400" />
                           )}
-                          <span>{user.displayName}</span>
+                          <div>
+                            <div>{user.displayName}</div>
+                            {user.accountDisabled && (
+                              <Badge variant="destructive" className="mt-1">
+                                <Ban className="h-3 w-3 mr-1" />
+                                Disabled
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm bg-gray-50">
+                      <TableCell className="font-mono text-sm">
                         {user.email}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.emailVerified ? "default" : "secondary"}>
-                          {user.emailVerified ? "✓ Verified" : "⚠ Unverified"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Select
-                            value={user.role || 'user'}
-                            onValueChange={(value: 'user' | 'admin' | 'superadmin') => 
-                              updateUserRole(user.uid, value)
-                            }
-                            disabled={updating === user.uid || user.uid === userProfile?.uid}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="superadmin">Super Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {updating === user.uid && (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">
-                        {user.totalSubmissions || 0}
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {user.firebaseCreatedAt?.toDate?.()?.toLocaleDateString() || 
                          user.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="font-semibold">{user.correctSubmissions || 0}</span>
+                          <span className="text-gray-500">/ {user.totalSubmissions || 0}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={user.freezeSubmissions || false}
+                            onCheckedChange={() => toggleFreezeSubmissions(user.uid, user.freezeSubmissions || false)}
+                            disabled={user.uid === currentUser?.uid}
+                          />
+                          {user.freezeSubmissions ? (
+                            <Lock className="h-4 w-4 text-red-600" />
+                          ) : (
+                            <Unlock className="h-4 w-4 text-green-600" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={user.accountDisabled || false}
+                            onCheckedChange={() => toggleAccountDisabled(user.uid, user.accountDisabled || false)}
+                            disabled={user.uid === currentUser?.uid || user.role === 'admin' || user.role === 'superadmin'}
+                          />
+                          {user.accountDisabled ? (
+                            <Ban className="h-4 w-4 text-red-600" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

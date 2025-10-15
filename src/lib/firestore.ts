@@ -44,6 +44,9 @@ export interface UserProfile {
   // Firebase Auth fields (read-only)
   emailVerified?: boolean;
   firebaseCreatedAt?: Timestamp;
+  // Admin controls
+  freezeSubmissions?: boolean;
+  accountDisabled?: boolean;
 }
 
 export interface Puzzle {
@@ -246,6 +249,30 @@ export const userService = {
       });
     } catch (error) {
       console.error('Error updating user role:', error);
+      throw error;
+    }
+  },
+
+  // Toggle freeze submissions (admin only)
+  async toggleFreezeSubmissions(uid: string, freeze: boolean): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        freezeSubmissions: freeze,
+      });
+    } catch (error) {
+      console.error('Error toggling freeze submissions:', error);
+      throw error;
+    }
+  },
+
+  // Toggle account disabled (admin only)
+  async toggleAccountDisabled(uid: string, disabled: boolean): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        accountDisabled: disabled,
+      });
+    } catch (error) {
+      console.error('Error toggling account disabled:', error);
       throw error;
     }
   }
