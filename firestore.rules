@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get user's role from users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function to check if user is admin or superadmin
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() in ['admin', 'superadmin'];
+    }
+    
+    // Helper function to check if user is superadmin
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'superadmin';
+    }
+    
+    // PUZZLES COLLECTION
+    match /puzzles/{puzzleId} {
+      // Admin and superadmin can read/write puzzles
+      allow read, write: if isAdmin();
+      // Regular users can only read puzzles
+      allow read: if isAuthenticated();
+    }
+    
+    // USERS COLLECTION
+    match /users/{userId} {
+      // Superadmin can read/write all user documents
+      allow read, write: if isSuperAdmin();
+      
+      // Regular users can only read their own user info
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can update their own profile (for displayName, etc.)
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // POTW SUBMISSIONS COLLECTION
+    match /potw_submissions/{submissionId} {
+      // Anyone authenticated can create submissions
+      allow create: if isAuthenticated();
+      
+      // All authenticated users can read all submissions
+      allow read: if isAuthenticated();
+      
+      // No updates or deletes allowed (submissions are final)
+      allow update, delete: if false;
+    }
+    
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
