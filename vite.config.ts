@@ -6,7 +6,7 @@ import { componentTagger } from "lovable-tagger";
 import "dotenv/config";
 
 export default defineConfig(({ mode }) => ({
-	base: process.env.deploy ? "/" : "/math-club-western",
+	base: process.env.NODE_ENV === 'production' ? "/" : "/math-club-western",
 	server: {
 		host: "::",
 		port: 8080,
