@@ -1,7 +1,7 @@
 [
   {
     "name": "Edward Xue",
-    "position": "Club President",
+    "position": "V",
     "description": "Hi, I'm Edward!",
     "image": "https://live.staticflickr.com/65535/54712667039_6da63a8fc6_q.jpg",
     "credentials": [
@@ -12,18 +12,14 @@
   },
   {
     "name": "Jack Nie",
-    "position": "Club President",
-    "description": "Grade 12 student, AMC 12 qualifier, passionate about number theory and combinatorics.",
+    "position": "V",
+    "description": "Hi, I'm Jack!",
     "image": "https://live.staticflickr.com/65535/54710269163_64830d6b28.jpg",
-    "credentials": [
-      "AMC 12 Qualifier",
-      "Number Theory Enthusiast",
-      "Club President"
-    ]
+    "credentials": ["N/A"]
   },
   {
     "name": "Jimmy Yuan",
-    "position": "Content Team Lead",
+    "position": "V",
     "description": "Grade 11 student, AIME qualifier, specializes in geometry and algebra problem solving.",
     "image": "https://live.staticflickr.com/65535/54719966580_0abdc0282e_q.jpg",
     "credentials": [
@@ -34,7 +30,7 @@
   },
   {
     "name": "Erika Shan",
-    "position": "Secretary",
+    "position": "V",
     "description": "I’m Erika Shan, and I recently graduated from Henry Wise Wood High School as a partial IB student. I am now a student at University of Waterloo for Math.",
     "image": "https://live.staticflickr.com/65535/54712762030_ebc0952384_q.jpg",
     "credentials": [
@@ -45,7 +41,7 @@
   },
   {
     "name": "Ella Zhang",
-    "position": "Events Coordinator",
+    "position": "V",
     "description": "Hello! I’m Ella, a Grade 12 student from Western Canada High School. I love tackling challenging math problems, and I hope you enjoy participating in our contest!",
     "image": "https://live.staticflickr.com/65535/54712653909_8ef201dd5e_q.jpg",
     "credentials": [
@@ -56,7 +52,7 @@
   },
   {
     "name": "Marlea Wang",
-    "position": "Treasurer",
+    "position": "V",
     "description": "Hi! I love dancing and travelling the world with my family 🙂",
     "image": "https://live.staticflickr.com/65535/54718794162_3b3483d3c0_q.jpg",
     "credentials": [

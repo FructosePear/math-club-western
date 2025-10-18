@@ -26,8 +26,24 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
@@ -39,7 +55,9 @@ const AdminUsers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [latestSubmissions, setLatestSubmissions] = useState<Record<string, Date | null>>({});
+  const [latestSubmissions, setLatestSubmissions] = useState<
+    Record<string, Date | null>
+  >({});
   const [roleChangeDialog, setRoleChangeDialog] = useState<{
     isOpen: boolean;
     user: UserProfile | null;
@@ -60,15 +78,20 @@ const AdminUsers: React.FC = () => {
       setLoading(true);
       const allUsers = await userService.getAllUsers();
       setUsers(allUsers);
-      
+
       // Load latest submission dates for each user
       const submissionDates: Record<string, Date | null> = {};
       for (const user of allUsers) {
         try {
-          const latestDate = await potwService.getUserLatestSubmissionDate(user.uid);
+          const latestDate = await potwService.getUserLatestSubmissionDate(
+            user.uid
+          );
           submissionDates[user.uid] = latestDate;
         } catch (error) {
-          console.error(`Error loading latest submission for user ${user.uid}:`, error);
+          console.error(
+            `Error loading latest submission for user ${user.uid}:`,
+            error
+          );
           submissionDates[user.uid] = null;
         }
       }
@@ -97,7 +120,7 @@ const AdminUsers: React.FC = () => {
       toast.error("You cannot change your own role");
       return;
     }
-    
+
     setRoleChangeDialog({
       isOpen: true,
       user: user,
@@ -110,18 +133,26 @@ const AdminUsers: React.FC = () => {
 
     try {
       setUpdating(roleChangeDialog.user.uid);
-      await userService.updateUserRole(roleChangeDialog.user.uid, roleChangeDialog.newRole as "user" | "admin");
+      await userService.updateUserRole(
+        roleChangeDialog.user.uid,
+        roleChangeDialog.newRole as "user" | "admin"
+      );
 
       // Update local state
       setUsers(
         users.map((user) =>
-          user.uid === roleChangeDialog.user!.uid ? { ...user, role: roleChangeDialog.newRole as "user" | "admin" } : user
+          user.uid === roleChangeDialog.user!.uid
+            ? { ...user, role: roleChangeDialog.newRole as "user" | "admin" }
+            : user
         )
       );
 
       // Update current user profile if it's the same user
       if (userProfile && userProfile.uid === roleChangeDialog.user.uid) {
-        setUserProfile({ ...userProfile, role: roleChangeDialog.newRole as "user" | "admin" });
+        setUserProfile({
+          ...userProfile,
+          role: roleChangeDialog.newRole as "user" | "admin",
+        });
       }
 
       toast.success(`User role updated to ${roleChangeDialog.newRole}`);
@@ -218,8 +249,9 @@ const AdminUsers: React.FC = () => {
           <Alert className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Note:</strong> You can change user roles (User, Admin, Super Admin) and manage account settings. 
-              Other fields (email, display name, etc.) are read-only and managed by Firebase Auth.
+              <strong>Note:</strong> You can change user roles (User, Admin,
+              Super Admin) and manage account settings. Other fields (email,
+              display name, etc.) are read-only and managed by Firebase Auth.
             </AlertDescription>
           </Alert>
         </div>
@@ -343,11 +375,14 @@ const AdminUsers: React.FC = () => {
                       <TableCell className="text-sm">
                         <div className="flex items-center space-x-2">
                           <Select
-                            value={user.role || 'user'}
-                            onValueChange={(value: 'user' | 'admin') => 
+                            value={user.role || "user"}
+                            onValueChange={(value: "user" | "admin") =>
                               handleRoleChange(user, value)
                             }
-                            disabled={updating === user.uid || user.role === 'superadmin'}
+                            disabled={
+                              updating === user.uid ||
+                              user.role === "superadmin"
+                            }
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />
@@ -393,13 +428,21 @@ const AdminUsers: React.FC = () => {
                       <TableCell className="text-sm text-gray-600">
                         {latestSubmissions[user.uid] ? (
                           <div className="flex flex-col">
-                            <span>{latestSubmissions[user.uid]!.toLocaleDateString()}</span>
+                            <span>
+                              {latestSubmissions[
+                                user.uid
+                              ]!.toLocaleDateString()}
+                            </span>
                             <span className="text-xs text-gray-400">
-                              {latestSubmissions[user.uid]!.toLocaleTimeString()}
+                              {latestSubmissions[
+                                user.uid
+                              ]!.toLocaleTimeString()}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">No submissions</span>
+                          <span className="text-gray-400 italic">
+                            No submissions
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -454,21 +497,38 @@ const AdminUsers: React.FC = () => {
       </div>
 
       {/* Role Change Confirmation Dialog */}
-      <AlertDialog open={roleChangeDialog.isOpen} onOpenChange={setRoleChangeDialog}>
+      <AlertDialog
+        open={roleChangeDialog.isOpen}
+        onOpenChange={setRoleChangeDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to change <strong>{roleChangeDialog.user?.displayName}</strong>'s role from{' '}
-              <strong>{(roleChangeDialog.user?.role || 'user').charAt(0).toUpperCase() + (roleChangeDialog.user?.role || 'user').slice(1)}</strong> to{' '}
-              <strong>{roleChangeDialog.newRole?.charAt(0).toUpperCase() + roleChangeDialog.newRole?.slice(1)}</strong>?
-              <br /><br />
-              This will change their permissions and access level in the system.
+              Are you sure you want to change{" "}
+              <strong>{roleChangeDialog.user?.displayName}</strong>'s role from{" "}
+              <strong>
+                {(roleChangeDialog.user?.role || "user")
+                  .charAt(0)
+                  .toUpperCase() +
+                  (roleChangeDialog.user?.role || "user").slice(1)}
+              </strong>{" "}
+              to{" "}
+              <strong>
+                {roleChangeDialog.newRole?.charAt(0).toUpperCase() +
+                  roleChangeDialog.newRole?.slice(1)}
+              </strong>
+              ?
+              <br />
+              <br />
+              THIS WILL CHANGE PERMISSIONS AND ACCESS LEVEL.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelRoleChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel onClick={cancelRoleChange}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={confirmRoleChange}
               className="bg-blue-600 hover:bg-blue-700"
             >

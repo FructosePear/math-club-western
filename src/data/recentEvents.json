@@ -1,48 +1,32 @@
-
 [
   {
-    "title": "Math Tutoring for High School Students",
-    "date": "July 19, 2024",
+    "title": "Tutoring",
+    "date": "July 16, 2026",
     "time": "2:00 PM - 5:00 PM",
-    "location": "Central Library",
+    "location": "WCHS",
     "description": "Free tutoring sessions for high school students struggling with mathematics. Our experienced volunteers provide personalized help with homework, test preparation, and concept reinforcement. No registration required - just drop in!",
     "status": "Upcoming",
-    "details": [
-      "Covers all high school math topics",
-      "One-on-one and small group sessions", 
-      "Experienced student tutors",
-      "Free of charge"
-    ],
+    "details": ["Tutoring for people"],
     "image": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&h=300&fit=crop"
   },
   {
-    "title": "High School Math Contest",
-    "date": "December 15, 2024",
+    "title": "CHSMC",
+    "date": "No date",
     "time": "9:00 AM - 3:00 PM",
-    "location": "Western High School",
-    "description": "Annual inter-school mathematics competition featuring challenging problems across all high school math topics. Students compete individually and in teams for prizes and recognition.",
+    "location": "HWW",
+    "description": "Annual inter-school mathematics competition with hard problems across all high school math topics. Students compete individually and in teams for prizes and recognition.",
     "status": "Upcoming",
-    "details": [
-      "Individual and team competitions",
-      "Multiple difficulty levels",
-      "Prizes for top performers",
-      "Lunch provided for participants"
-    ],
+    "details": ["Free of cost"],
     "image": "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=500&h=300&fit=crop"
   },
   {
-    "title": "End of Year Mathematics Get Together",
-    "date": "May 25, 2024",
+    "title": "End of year Math Potluck",
+    "date": "No date",
     "time": "6:00 PM - 9:00 PM",
-    "location": "School Auditorium",
-    "description": "Celebrate the year's achievements with presentations, awards ceremony, and mathematical games for all members. Join us for an evening of mathematics, fun, and community.",
+    "location": "WCHS",
+    "description": "Eat food together + have fun!",
     "status": "Upcoming",
-    "details": [
-      "Awards ceremony for outstanding members",
-      "Student presentations on research projects",
-      "Mathematical games and puzzles",
-      "Refreshments and networking"
-    ],
+    "details": ["You must bring a dish to share >:("],
     "image": "https://images.unsplash.com/photo-1466442929976-97f336a657be?w=500&h=300&fit=crop"
   }
 ]
