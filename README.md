@@ -20,6 +20,33 @@ A simple math club website with Problem of the Week challenges.
 
 4. **Open** `http://localhost:8080`
 
+## Deployment
+
+### Firebase Hosting
+
+1. **Install Firebase CLI** (if not already installed)
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. **Login to Firebase**
+   ```bash
+   firebase login
+   ```
+
+3. **Build the app**
+   ```bash
+   npm run build
+   ```
+
+4. **Deploy to Firebase**
+   ```bash
+   firebase deploy
+   ```
+
+5. **Your app will be live at:** (find url in firebase hosting)
+
+
 ## Features
 
 - Problem of the Week with countdown timer
