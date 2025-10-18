@@ -27,12 +27,22 @@ const AdminPuzzles: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
+  const [gradedCounts, setGradedCounts] = useState<Record<string, number>>({});
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     puzzle: Puzzle | null;
   }>({
     isOpen: false,
     puzzle: null,
+  });
+  const [activeDialog, setActiveDialog] = useState<{
+    isOpen: boolean;
+    puzzle: Puzzle | null;
+    newStatus: boolean;
+  }>({
+    isOpen: false,
+    puzzle: null,
+    newStatus: false,
   });
   
   type PuzzleFormData = {
@@ -70,19 +80,24 @@ const AdminPuzzles: React.FC = () => {
       
       // Load submission counts for each puzzle
       const counts: Record<string, number> = {};
+      const gradedCounts: Record<string, number> = {};
       for (const puzzle of puzzleList) {
         try {
           console.log(`Loading submissions for puzzle: ${puzzle.id} - ${puzzle.title}`);
           const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
           console.log(`Found ${submissions.length} submissions for puzzle ${puzzle.id}`);
           counts[puzzle.id!] = submissions.length;
+          gradedCounts[puzzle.id!] = submissions.filter(sub => sub.grade).length;
         } catch (error) {
           console.error(`Error loading submissions for puzzle ${puzzle.id}:`, error);
           counts[puzzle.id!] = 0;
+          gradedCounts[puzzle.id!] = 0;
         }
       }
       console.log('Final submission counts:', counts);
+      console.log('Final graded counts:', gradedCounts);
       setSubmissionCounts(counts);
+      setGradedCounts(gradedCounts);
     } catch (error) {
       console.error('Error loading puzzles:', error);
     } finally {
@@ -200,22 +215,38 @@ const AdminPuzzles: React.FC = () => {
     setDeleteDialog({ isOpen: false, puzzle: null });
   };
 
-  const toggleActive = async (puzzle: Puzzle) => {
+  const handleActiveToggle = (puzzle: Puzzle) => {
+    setActiveDialog({
+      isOpen: true,
+      puzzle: puzzle,
+      newStatus: !puzzle.isActive,
+    });
+  };
+
+  const confirmActiveChange = async () => {
+    if (!activeDialog.puzzle) return;
+
     try {
-      if (!puzzle.isActive) {
+      if (!activeDialog.puzzle.isActive) {
         // If activating, use setPuzzleActive to ensure only one is active
-        await puzzleService.setPuzzleActive(puzzle.id!);
+        await puzzleService.setPuzzleActive(activeDialog.puzzle.id!);
       } else {
         // If deactivating, just update this puzzle
-        await puzzleService.updatePuzzle(puzzle.id!, {
+        await puzzleService.updatePuzzle(activeDialog.puzzle.id!, {
           isActive: false,
         });
       }
       loadPuzzles();
+      setActiveDialog({ isOpen: false, puzzle: null, newStatus: false });
     } catch (error) {
-      console.error('Error updating puzzle:', error);
+      console.error('Error updating puzzle status:', error);
     }
   };
+
+  const cancelActiveChange = () => {
+    setActiveDialog({ isOpen: false, puzzle: null, newStatus: false });
+  };
+
 
   if (adminLoading) {
     return (
@@ -437,7 +468,7 @@ const AdminPuzzles: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <Switch
                             checked={puzzle.isActive}
-                            onCheckedChange={() => toggleActive(puzzle)}
+                            onCheckedChange={() => handleActiveToggle(puzzle)}
                           />
                           <span className={puzzle.isActive ? 'text-green-600' : 'text-gray-500'}>
                             {puzzle.isActive ? 'Active' : 'Inactive'}
@@ -456,7 +487,7 @@ const AdminPuzzles: React.FC = () => {
                             <FileText className="h-4 w-4" />
                             <span className="ml-1">Submissions</span>
                             <Badge variant="secondary" className="ml-2 bg-white text-blue-600">
-                              {submissionCounts[puzzle.id!] || 0}
+                              {gradedCounts[puzzle.id!] || 0}/{submissionCounts[puzzle.id!] || 0}
                             </Badge>
                           </Button>
                           <Button
@@ -502,6 +533,43 @@ const AdminPuzzles: React.FC = () => {
               className="bg-red-600 hover:bg-red-700"
             >
               Delete Puzzle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Active Status Confirmation Dialog */}
+      <AlertDialog open={activeDialog.isOpen} onOpenChange={setActiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {activeDialog.newStatus ? 'activate' : 'deactivate'} the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
+              <br /><br />
+              {activeDialog.newStatus ? (
+                <>
+                  <strong>Activating this puzzle will:</strong>
+                  <br />• Make it visible to all users
+                  <br />• Allow users to submit solutions
+                  <br />• Automatically deactivate any other active puzzle
+                </>
+              ) : (
+                <>
+                  <strong>Deactivating this puzzle will:</strong>
+                  <br />• Hide it from users
+                  <br />• Prevent new submissions
+                  <br />• Keep existing submissions intact
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelActiveChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmActiveChange}
+              className={activeDialog.newStatus ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}
+            >
+              {activeDialog.newStatus ? 'Activate Puzzle' : 'Deactivate Puzzle'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

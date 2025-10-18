@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Star, Clock, User, Mail } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -23,6 +24,15 @@ const PuzzleSubmissions: React.FC = () => {
   const [submissions, setSubmissions] = useState<POTWSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [gradeDialog, setGradeDialog] = useState<{
+    isOpen: boolean;
+    submission: POTWSubmission | null;
+    newGrade: number | null;
+  }>({
+    isOpen: false,
+    submission: null,
+    newGrade: null,
+  });
 
   useEffect(() => {
     if (puzzleId) {
@@ -51,29 +61,42 @@ const PuzzleSubmissions: React.FC = () => {
     }
   };
 
-  const handleGradeChange = async (submissionId: string, grade: number) => {
-    if (!currentUser) return;
+  const handleGradeChange = (submission: POTWSubmission, grade: number) => {
+    setGradeDialog({
+      isOpen: true,
+      submission: submission,
+      newGrade: grade,
+    });
+  };
+
+  const confirmGradeChange = async () => {
+    if (!currentUser || !gradeDialog.submission || !gradeDialog.newGrade) return;
     
     try {
-      setUpdating(submissionId);
-      await potwService.updateSubmissionGrade(submissionId, grade, currentUser.uid);
+      setUpdating(gradeDialog.submission.id!);
+      await potwService.updateSubmissionGrade(gradeDialog.submission.id!, gradeDialog.newGrade, currentUser.uid);
       
       // Update local state
       setSubmissions(prev => 
         prev.map(sub => 
-          sub.id === submissionId 
-            ? { ...sub, grade, gradedAt: new Date() as any, gradedBy: currentUser.uid }
+          sub.id === gradeDialog.submission!.id 
+            ? { ...sub, grade: gradeDialog.newGrade, gradedAt: new Date() as any, gradedBy: currentUser.uid }
             : sub
         )
       );
       
-      toast.success(`Grade updated to ${grade}/5`);
+      toast.success(`Grade updated to ${gradeDialog.newGrade}/5`);
     } catch (error) {
       console.error('Error updating grade:', error);
       toast.error('Failed to update grade');
     } finally {
       setUpdating(null);
+      setGradeDialog({ isOpen: false, submission: null, newGrade: null });
     }
+  };
+
+  const cancelGradeChange = () => {
+    setGradeDialog({ isOpen: false, submission: null, newGrade: null });
   };
 
   const getGradeColor = (grade?: number) => {
@@ -271,7 +294,7 @@ const PuzzleSubmissions: React.FC = () => {
                       <TableCell>
                         <Select
                           value={submission.grade?.toString() || ''}
-                          onValueChange={(value) => handleGradeChange(submission.id!, parseInt(value))}
+                          onValueChange={(value) => handleGradeChange(submission, parseInt(value))}
                           disabled={updating === submission.id}
                         >
                           <SelectTrigger className="w-24">
@@ -297,6 +320,31 @@ const PuzzleSubmissions: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Grade Confirmation Dialog */}
+      <AlertDialog open={gradeDialog.isOpen} onOpenChange={setGradeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Grade Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to grade <strong>{gradeDialog.submission?.userName}</strong>'s submission as <strong>{gradeDialog.newGrade}/5</strong>?
+              <br /><br />
+              Current grade: {gradeDialog.submission?.grade ? `${gradeDialog.submission.grade}/5` : 'Not graded'}
+              <br />
+              New grade: {gradeDialog.newGrade}/5
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelGradeChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmGradeChange}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Update Grade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>

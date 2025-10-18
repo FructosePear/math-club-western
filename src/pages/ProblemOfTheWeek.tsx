@@ -6,6 +6,7 @@ import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { potwService, puzzleService, Puzzle as FirestorePuzzle } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import Leaderboard from '@/components/Leaderboard';
@@ -338,6 +339,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
     "idle" | "submitting" | "success" | "error"
 	>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
 	useEffect(() => {
 		// Check if user already submitted this puzzle
@@ -354,7 +356,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 		checkSubmission();
 	}, [puzzleId, currentUser]);
 
-	const onSubmit = async (e: React.FormEvent) => {
+	const handleSubmitClick = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (submitted || !currentUser) return;
 
@@ -369,9 +371,17 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 			return;
 		}
 
+		// Show confirmation dialog
+		setShowConfirmDialog(true);
+	};
+
+	const confirmSubmit = async () => {
+		if (!currentUser) return;
+
 		try {
 			setStatus("submitting");
 			setError(null);
+			setShowConfirmDialog(false);
 
 			await submit({ 
 				puzzleId, 
@@ -387,6 +397,10 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 			setStatus("error");
 			setError(getErrorMessage(e));
 		}
+	};
+
+	const cancelSubmit = () => {
+		setShowConfirmDialog(false);
 	};
 
 	return (
@@ -422,7 +436,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 				</div>
 			) : (
 				<div>
-					<form onSubmit={onSubmit} className="space-y-3">
+					<form onSubmit={handleSubmitClick} className="space-y-3">
 						<textarea
 							placeholder="Your solution / reasoning"
 							value={answer}
@@ -450,6 +464,29 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 			<p className="mt-2 text-xs text-gray-500">
 				IMPORTANT: You can only submit an answer once!
 			</p>
+
+			{/* Submit Confirmation Dialog */}
+			<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Confirm Submission</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to submit your answer for this puzzle?
+							<br /><br />
+							<strong>Important:</strong> You can only submit once per puzzle. Make sure your answer is complete and correct before proceeding.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={cancelSubmit}>Cancel</AlertDialogCancel>
+						<AlertDialogAction 
+							onClick={confirmSubmit}
+							className="bg-teal-600 hover:bg-teal-700"
+						>
+							Submit Answer
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
