@@ -37,10 +37,10 @@ const RecentEvents = () => {
 
 					<div className="overflow-hidden">
 						<div className="scroller-track flex gap-6 px-4 py-5 will-change-transform">
-							{looped.map((event) => {
+							{looped.map((event, index) => {
 								const daysUntil = calculateDaysUntil(event.date);
 								return (
-									<Card key={event.title} className="min-w-[380px] max-w-[380px] shrink-0 transition-shadow duration-300 hover:shadow-lg">
+									<Card key={`${event.title}-${index}`} className="min-w-[380px] max-w-[380px] shrink-0 transition-shadow duration-300 hover:shadow-lg">
 										<CardHeader>
 											<div className="mb-2 flex items-center justify-between">
 												<span

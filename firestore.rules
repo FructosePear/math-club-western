@@ -50,8 +50,12 @@ service cloud.firestore {
       // All authenticated users can read all submissions
       allow read: if isAuthenticated();
       
-      // No updates or deletes allowed (submissions are final)
-      allow update, delete: if false;
+      // Admins can update grades and grading info
+      allow update: if isAdmin() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['grade', 'gradedAt', 'gradedBy']);
+      
+      // No deletes allowed (submissions are final)
+      allow delete: if false;
     }
     
     // Deny all other access by default

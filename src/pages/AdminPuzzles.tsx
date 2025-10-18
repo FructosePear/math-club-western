@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
-import { puzzleService, Puzzle } from '@/lib/firestore';
+import { puzzleService, potwService, Puzzle } from '@/lib/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,16 +13,19 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AdminPuzzles: React.FC = () => {
   const { currentUser } = useAuth();
   const { userProfile, loading: adminLoading, canManagePuzzles } = useAdmin();
+  const navigate = useNavigate();
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
+  const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
   
   type PuzzleFormData = {
     title: string;
@@ -56,6 +59,22 @@ const AdminPuzzles: React.FC = () => {
       setLoading(true);
       const puzzleList = await puzzleService.getPuzzles();
       setPuzzles(puzzleList);
+      
+      // Load submission counts for each puzzle
+      const counts: Record<string, number> = {};
+      for (const puzzle of puzzleList) {
+        try {
+          console.log(`Loading submissions for puzzle: ${puzzle.id} - ${puzzle.title}`);
+          const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
+          console.log(`Found ${submissions.length} submissions for puzzle ${puzzle.id}`);
+          counts[puzzle.id!] = submissions.length;
+        } catch (error) {
+          console.error(`Error loading submissions for puzzle ${puzzle.id}:`, error);
+          counts[puzzle.id!] = 0;
+        }
+      }
+      console.log('Final submission counts:', counts);
+      setSubmissionCounts(counts);
     } catch (error) {
       console.error('Error loading puzzles:', error);
     } finally {
@@ -407,6 +426,19 @@ const AdminPuzzles: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => navigate(`/admin/puzzle-submissions/${puzzle.id}`)}
+                            title="View Submissions"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="ml-1">Submissions</span>
+                            <Badge variant="secondary" className="ml-2 bg-white text-blue-600">
+                              {submissionCounts[puzzle.id!] || 0}
+                            </Badge>
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

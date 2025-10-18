@@ -29,15 +29,18 @@ const UserDashboard: React.FC = () => {
         const userSubmissions = await userService.getUserSubmissions(currentUser.uid);
         setSubmissions(userSubmissions);
 
-        // Get user profile for stats
-        const userProfile = await userService.getUserProfile(currentUser.uid);
-        if (userProfile) {
-          setStats({
-            totalSubmissions: userProfile.totalSubmissions || 0,
-            correctSubmissions: userProfile.correctSubmissions || 0,
-            averageScore: userProfile.averageScore || 0
-          });
-        }
+        // Calculate stats from submissions using grade field
+        const totalSubmissions = userSubmissions.length;
+        const gradedSubmissions = userSubmissions.filter(s => s.grade);
+        const averageGrade = gradedSubmissions.length > 0 
+          ? gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length 
+          : 0;
+        
+        setStats({
+          totalSubmissions,
+          correctSubmissions: gradedSubmissions.length, // Count graded submissions
+          averageScore: averageGrade * 20 // Convert 1-5 scale to percentage (1=20%, 5=100%)
+        });
       } catch (error) {
         console.error('Error loading user data:', error);
       } finally {
@@ -152,7 +155,6 @@ const UserDashboard: React.FC = () => {
                     <TableHead>Puzzle</TableHead>
                     <TableHead>Answer</TableHead>
                     <TableHead>Score</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Submitted</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -169,15 +171,15 @@ const UserDashboard: React.FC = () => {
                         {submission.answer}
                       </TableCell>
                       <TableCell>
-                        {submission.score ? `${submission.score}/100` : 'Pending'}
-                      </TableCell>
-                      <TableCell>
-                        {submission.isCorrect !== undefined ? (
-                          <Badge variant={submission.isCorrect ? 'default' : 'destructive'}>
-                            {submission.isCorrect ? 'Correct' : 'Incorrect'}
+                        {submission.grade ? (
+                          <Badge variant="default" className="bg-green-500 text-white font-semibold px-2 py-1">
+                            {submission.grade}/5
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">Pending Review</Badge>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-500">Pending</span>
+                            <Badge variant="secondary">⏳</Badge>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>

@@ -103,9 +103,9 @@ export default function Leaderboard({ puzzleId }: LeaderboardProps) {
                       Correct
                     </Badge>
                   )}
-                  {submission.score && (
+                  {submission.grade && (
                     <Badge variant="outline" className="mt-1">
-                      {submission.score} pts
+                      {submission.grade}/5
                     </Badge>
                   )}
                 </div>

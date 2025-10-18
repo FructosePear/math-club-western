@@ -20,6 +20,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import UserDashboard from "./pages/UserDashboard";
 import AdminPuzzles from "./pages/AdminPuzzles";
 import AdminUsers from "./pages/AdminUsers";
+import PuzzleSubmissions from "./pages/PuzzleSubmissions";
 import Terms from "./pages/Terms";
 
 const App = () => {
@@ -50,6 +51,7 @@ const App = () => {
 							<Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/admin/puzzles" element={<AdminPuzzles />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/puzzle-submissions/:puzzleId" element={<PuzzleSubmissions />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="*" element={<NotFound />} />
 						</Routes>

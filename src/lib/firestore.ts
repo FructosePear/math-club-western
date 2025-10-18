@@ -29,6 +29,9 @@ export interface POTWSubmission {
   createdAt: Timestamp;
   score?: number;
   isCorrect?: boolean;
+  grade?: number; // 1-5 point scale for admin grading
+  gradedAt?: Timestamp;
+  gradedBy?: string; // Admin UID who graded it
 }
 
 export interface UserProfile {
@@ -108,15 +111,23 @@ export const potwService = {
     try {
       const q = query(
         collection(db, 'potw_submissions'),
-        where('puzzleId', '==', puzzleId),
-        orderBy('createdAt', 'desc')
+        where('puzzleId', '==', puzzleId)
       );
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const submissions = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as POTWSubmission[];
+      
+      // Sort in JavaScript instead of Firestore
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      return submissions;
     } catch (error) {
       console.error('Error getting puzzle submissions:', error);
       throw error;
@@ -158,6 +169,50 @@ export const potwService = {
     }
   },
 
+  // Get all submissions for a specific puzzle (for admin grading)
+  async getPuzzleSubmissionsForGrading(puzzleId: string): Promise<POTWSubmission[]> {
+    try {
+      // Query without orderBy to avoid index requirement
+      const q = query(
+        collection(db, 'potw_submissions'),
+        where('puzzleId', '==', puzzleId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const submissions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as POTWSubmission[];
+      
+      // Sort in JavaScript instead of Firestore
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      return submissions;
+    } catch (error) {
+      console.error('Error getting puzzle submissions for grading:', error);
+      throw error;
+    }
+  },
+
+  // Update submission grade (admin only)
+  async updateSubmissionGrade(submissionId: string, grade: number, gradedBy: string): Promise<void> {
+    try {
+      const submissionRef = doc(db, 'potw_submissions', submissionId);
+      await updateDoc(submissionRef, {
+        grade: grade,
+        gradedAt: serverTimestamp(),
+        gradedBy: gradedBy
+      });
+    } catch (error) {
+      console.error('Error updating submission grade:', error);
+      throw error;
+    }
+  },
+
   // Real-time leaderboard for a puzzle
   subscribeToPuzzleSubmissions(
     puzzleId: string, 
@@ -165,9 +220,7 @@ export const potwService = {
   ) {
     const q = query(
       collection(db, 'potw_submissions'),
-      where('puzzleId', '==', puzzleId),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      where('puzzleId', '==', puzzleId)
     );
 
     return onSnapshot(q, (querySnapshot) => {
@@ -175,7 +228,17 @@ export const potwService = {
         id: doc.id,
         ...doc.data()
       })) as POTWSubmission[];
-      callback(submissions);
+      
+      // Sort in JavaScript instead of Firestore
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      // Apply limit in JavaScript
+      const limitedSubmissions = submissions.slice(0, 50);
+      callback(limitedSubmissions);
     });
   }
 };
@@ -228,15 +291,23 @@ export const userService = {
     try {
       const q = query(
         collection(db, 'potw_submissions'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       );
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const submissions = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as POTWSubmission[];
+      
+      // Sort in JavaScript instead of Firestore
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      return submissions;
     } catch (error) {
       console.error('Error getting user submissions:', error);
       throw error;
@@ -248,13 +319,15 @@ export const userService = {
     try {
       const submissions = await this.getUserSubmissions(uid);
       const totalSubmissions = submissions.length;
-      const correctSubmissions = submissions.filter(s => s.isCorrect).length;
-      const averageScore = submissions.reduce((sum, s) => sum + (s.score || 0), 0) / totalSubmissions;
+      const gradedSubmissions = submissions.filter(s => s.grade);
+      const averageGrade = gradedSubmissions.length > 0 
+        ? gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length 
+        : 0;
 
       await updateDoc(doc(db, 'users', uid), {
         totalSubmissions,
-        correctSubmissions,
-        averageScore: Math.round(averageScore * 100) / 100,
+        correctSubmissions: gradedSubmissions.length, // Count graded submissions
+        averageScore: Math.round(averageGrade * 20 * 100) / 100, // Convert 1-5 scale to percentage
       });
     } catch (error) {
       console.error('Error updating user stats:', error);
