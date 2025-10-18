@@ -52,8 +52,17 @@ export default function ProblemOfTheWeek() {
 			// Get active puzzle
 			const activePuzzle = await puzzleService.getCurrentActivePuzzle();
 			
-			// Get all puzzles for archive
-			const all = await puzzleService.getPuzzles();
+			// Get puzzles by status for better security rule compliance
+			const [activeList, archivedList] = await Promise.all([
+				puzzleService.getPuzzlesByStatus('active'),
+				puzzleService.getPuzzlesByStatus('archived')
+			]);
+			
+			console.log('Active puzzles:', activeList);
+			console.log('Archived puzzles:', archivedList);
+			
+			// Combine for allPuzzles (used in archive)
+			const all = [...activeList, ...archivedList];
 			setAllPuzzles(all);
 
 			if (activePuzzle) {
