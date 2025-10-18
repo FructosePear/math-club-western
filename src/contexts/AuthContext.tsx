@@ -114,6 +114,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     await signOut(auth);
+    // Redirect to homepage after logout
+    const basePath = import.meta.env.BASE_URL || '/math-club-western';
+    window.location.href = basePath;
   };
 
   const resetPassword = async (email: string) => {
