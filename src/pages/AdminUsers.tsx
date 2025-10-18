@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { userService, UserProfile } from "@/lib/firestore";
+import { userService, UserProfile, potwService } from "@/lib/firestore";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ const AdminUsers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [latestSubmissions, setLatestSubmissions] = useState<Record<string, Date | null>>({});
 
   useEffect(() => {
     loadUsers();
@@ -47,6 +48,19 @@ const AdminUsers: React.FC = () => {
       setLoading(true);
       const allUsers = await userService.getAllUsers();
       setUsers(allUsers);
+      
+      // Load latest submission dates for each user
+      const submissionDates: Record<string, Date | null> = {};
+      for (const user of allUsers) {
+        try {
+          const latestDate = await potwService.getUserLatestSubmissionDate(user.uid);
+          submissionDates[user.uid] = latestDate;
+        } catch (error) {
+          console.error(`Error loading latest submission for user ${user.uid}:`, error);
+          submissionDates[user.uid] = null;
+        }
+      }
+      setLatestSubmissions(submissionDates);
     } catch (error) {
       console.error("Error loading users:", error);
     } finally {
@@ -264,6 +278,7 @@ const AdminUsers: React.FC = () => {
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Puzzles Solved</TableHead>
+                    <TableHead>Latest Submission</TableHead>
                     <TableHead>Freeze Submissions</TableHead>
                     <TableHead>Disable Account</TableHead>
                   </TableRow>
@@ -330,6 +345,18 @@ const AdminUsers: React.FC = () => {
                             / {user.totalSubmissions || 0}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {latestSubmissions[user.uid] ? (
+                          <div className="flex flex-col">
+                            <span>{latestSubmissions[user.uid]!.toLocaleDateString()}</span>
+                            <span className="text-xs text-gray-400">
+                              {latestSubmissions[user.uid]!.toLocaleTimeString()}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">No submissions</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">

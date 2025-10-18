@@ -123,6 +123,41 @@ export const potwService = {
     }
   },
 
+  // Get latest submission date for a user
+  async getUserLatestSubmissionDate(userId: string): Promise<Date | null> {
+    try {
+      const q = query(
+        collection(db, 'potw_submissions'),
+        where('userId', '==', userId)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      // Sort in JavaScript to find the latest submission
+      const submissions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as POTWSubmission[];
+      
+      // Sort by createdAt descending and get the latest
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime;
+      });
+      
+      const latestSubmission = submissions[0];
+      return latestSubmission.createdAt?.toDate() || null;
+    } catch (error) {
+      console.error('Error getting user latest submission date:', error);
+      return null;
+    }
+  },
+
   // Real-time leaderboard for a puzzle
   subscribeToPuzzleSubmissions(
     puzzleId: string, 
