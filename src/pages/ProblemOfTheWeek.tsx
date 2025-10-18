@@ -180,13 +180,13 @@ export default function ProblemOfTheWeek() {
 							</p>
 						</header>
 
-						{allPuzzles.length === 0 ? (
+						{allPuzzles.filter(p => p.status === 'archived').length === 0 ? (
 							<div className="text-center py-8 text-gray-500">
-								No puzzles found in the archive.
+								No archived puzzles found yet.
 							</div>
 						) : (
 							<div className="space-y-2">
-								{allPuzzles.map((p) => (
+								{allPuzzles.filter(p => p.status === 'archived').map((p) => (
 									<Card key={p.id} className="overflow-hidden">
 										<button
 											onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
@@ -197,22 +197,14 @@ export default function ProblemOfTheWeek() {
 													<div className="flex-1">
 														<div className="flex items-center gap-3">
 															<CardTitle className="text-lg">{p.title}</CardTitle>
-															<span className={`text-xs px-2 py-1 rounded ${p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-																{p.isActive ? 'Active' : 'Inactive'}
-															</span>
 														</div>
 														<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
 															<span>
-																Released: {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+																{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
 															</span>
 															<span>
-																Difficulty: {getStars(p.difficulty)}
+																{getStars(p.difficulty)}
 															</span>
-															{p.expiresAt && (
-																<span>
-																	Expires: {new Date(p.expiresAt.seconds * 1000).toLocaleDateString()}
-																</span>
-															)}
 														</div>
 													</div>
 													{expandedPuzzleId === p.id ? (

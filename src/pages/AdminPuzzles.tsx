@@ -22,7 +22,9 @@ const AdminPuzzles: React.FC = () => {
   const { currentUser } = useAuth();
   const { userProfile, loading: adminLoading, canManagePuzzles } = useAdmin();
   const navigate = useNavigate();
-  const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
+  const [activePuzzles, setActivePuzzles] = useState<Puzzle[]>([]);
+  const [backlogPuzzles, setBacklogPuzzles] = useState<Puzzle[]>([]);
+  const [archivedPuzzles, setArchivedPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
@@ -52,7 +54,6 @@ const AdminPuzzles: React.FC = () => {
     correctAnswer: string;
     solution: string;
     image: string;
-    isActive: boolean;
     expiresAt: string;
   };
 
@@ -64,7 +65,6 @@ const AdminPuzzles: React.FC = () => {
     correctAnswer: '',
     solution: '',
     image: '',
-    isActive: true,
     expiresAt: '',
   });
 
@@ -75,13 +75,24 @@ const AdminPuzzles: React.FC = () => {
   const loadPuzzles = async () => {
     try {
       setLoading(true);
-      const puzzleList = await puzzleService.getPuzzles();
-      setPuzzles(puzzleList);
       
-      // Load submission counts for each puzzle
+      // Load puzzles by status
+      const [activeList, backlogList, archivedList] = await Promise.all([
+        puzzleService.getPuzzlesByStatus('active'),
+        puzzleService.getPuzzlesByStatus('backlog'),
+        puzzleService.getPuzzlesByStatus('archived')
+      ]);
+      
+      setActivePuzzles(activeList);
+      setBacklogPuzzles(backlogList);
+      setArchivedPuzzles(archivedList);
+      
+      // Load submission counts for all puzzles
+      const allPuzzles = [...activeList, ...backlogList, ...archivedList];
       const counts: Record<string, number> = {};
       const gradedCounts: Record<string, number> = {};
-      for (const puzzle of puzzleList) {
+      
+      for (const puzzle of allPuzzles) {
         try {
           console.log(`Loading submissions for puzzle: ${puzzle.id} - ${puzzle.title}`);
           const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
@@ -94,6 +105,7 @@ const AdminPuzzles: React.FC = () => {
           gradedCounts[puzzle.id!] = 0;
         }
       }
+      
       console.log('Final submission counts:', counts);
       console.log('Final graded counts:', gradedCounts);
       setSubmissionCounts(counts);
@@ -125,17 +137,10 @@ const AdminPuzzles: React.FC = () => {
           updates.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
         }
         
-        // If activating, use setPuzzleActive to ensure only one is active
-        if (formData.isActive && !editingPuzzle.isActive) {
-          await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
-          await puzzleService.setPuzzleActive(editingPuzzle.id!);
-        } else {
-          updates.isActive = formData.isActive;
-          await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
-        }
+        await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
       } else {
-        // Create new puzzle
-        const puzzleData: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy'> = {
+        // Create new puzzle (will be in backlog status by default)
+        const puzzleData: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy' | 'status'> = {
           title: formData.title,
           date: new Date().toISOString().split('T')[0],
           prompt: formData.prompt,
@@ -143,19 +148,13 @@ const AdminPuzzles: React.FC = () => {
           correctAnswer: formData.correctAnswer,
           solution: formData.solution,
           image: formData.image,
-          isActive: false,
         };
         
         if (formData.expiresAt) {
           puzzleData.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
         }
         
-        const newPuzzleId = await puzzleService.createPuzzle(puzzleData, currentUser.uid);
-        
-        // If the puzzle is set to active, use setPuzzleActive to ensure only one is active
-        if (formData.isActive) {
-          await puzzleService.setPuzzleActive(newPuzzleId);
-        }
+        await puzzleService.createPuzzle(puzzleData, currentUser.uid);
       }
 
       // Reset form and reload puzzles
@@ -166,7 +165,6 @@ const AdminPuzzles: React.FC = () => {
         correctAnswer: '',
         solution: '',
         image: '',
-        isActive: true,
         expiresAt: '',
       });
       setEditingPuzzle(null);
@@ -186,7 +184,6 @@ const AdminPuzzles: React.FC = () => {
       correctAnswer: puzzle.correctAnswer || '',
       solution: puzzle.solution || '',
       image: puzzle.image || '',
-      isActive: puzzle.isActive,
       expiresAt: puzzle.expiresAt ? new Date(puzzle.expiresAt.seconds * 1000).toISOString().slice(0, 16) : '',
     });
     setIsDialogOpen(true);
@@ -215,11 +212,19 @@ const AdminPuzzles: React.FC = () => {
     setDeleteDialog({ isOpen: false, puzzle: null });
   };
 
-  const handleActiveToggle = (puzzle: Puzzle) => {
+  const handleActivatePuzzle = (puzzle: Puzzle) => {
     setActiveDialog({
       isOpen: true,
       puzzle: puzzle,
-      newStatus: !puzzle.isActive,
+      newStatus: true,
+    });
+  };
+
+  const handleArchivePuzzle = (puzzle: Puzzle) => {
+    setActiveDialog({
+      isOpen: true,
+      puzzle: puzzle,
+      newStatus: false, // false means archive
     });
   };
 
@@ -227,13 +232,14 @@ const AdminPuzzles: React.FC = () => {
     if (!activeDialog.puzzle) return;
 
     try {
-      if (!activeDialog.puzzle.isActive) {
-        // If activating, use setPuzzleActive to ensure only one is active
+      if (activeDialog.newStatus) {
+        // Activate the puzzle (will archive any currently active puzzle)
         await puzzleService.setPuzzleActive(activeDialog.puzzle.id!);
       } else {
-        // If deactivating, just update this puzzle
+        // Archive the puzzle
         await puzzleService.updatePuzzle(activeDialog.puzzle.id!, {
-          isActive: false,
+          status: 'archived',
+          archivedAt: new Date() as any
         });
       }
       loadPuzzles();
@@ -245,6 +251,119 @@ const AdminPuzzles: React.FC = () => {
 
   const cancelActiveChange = () => {
     setActiveDialog({ isOpen: false, puzzle: null, newStatus: false });
+  };
+
+  const renderPuzzleTable = (puzzles: Puzzle[], title: string, showActivateButton: boolean = false) => {
+    if (puzzles.length === 0) {
+      return (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>{title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-500">No puzzles found.</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>{title} ({puzzles.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Difficulty</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {puzzles.map((puzzle) => (
+                <TableRow key={puzzle.id}>
+                  <TableCell className="font-medium">{puzzle.title}</TableCell>
+                  <TableCell>
+                    {puzzle.createdAt ? new Date(puzzle.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {'★'.repeat(puzzle.difficulty)}{'☆'.repeat(5 - puzzle.difficulty)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={puzzle.status === 'active' ? 'default' : 'secondary'}
+                      className={puzzle.status === 'active' ? 'bg-green-600' : ''}
+                    >
+                      {puzzle.status.charAt(0).toUpperCase() + puzzle.status.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => navigate(`/admin/puzzle-submissions/${puzzle.id}`)}
+                        title="View Submissions"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="ml-1">Submissions</span>
+                        <Badge variant="secondary" className="ml-2 bg-white text-blue-600">
+                          {gradedCounts[puzzle.id!] || 0}/{submissionCounts[puzzle.id!] || 0}
+                        </Badge>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(puzzle)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {showActivateButton && puzzle.status === 'backlog' && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => handleActivatePuzzle(puzzle)}
+                        >
+                          Activate
+                        </Button>
+                      )}
+                      {puzzle.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                          onClick={() => handleArchivePuzzle(puzzle)}
+                        >
+                          Archive
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteClick(puzzle)}
+                        disabled={puzzle.status === 'active'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
   };
 
 
@@ -312,7 +431,6 @@ const AdminPuzzles: React.FC = () => {
                   correctAnswer: '',
                   solution: '',
                   image: '',
-                  isActive: true,
                   expiresAt: '',
                 });
               }}>
@@ -404,14 +522,6 @@ const AdminPuzzles: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                  <Label htmlFor="isActive">Active (visible to users)</Label>
-                </div>
 
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -426,93 +536,24 @@ const AdminPuzzles: React.FC = () => {
           </Dialog>
         </div>
 
-        {/* Puzzles Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Puzzles ({puzzles.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading puzzles...</p>
-              </div>
-            ) : puzzles.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No puzzles found. Create your first puzzle!</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Difficulty</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {puzzles.map((puzzle) => (
-                    <TableRow key={puzzle.id}>
-                      <TableCell className="font-medium">{puzzle.title}</TableCell>
-                      <TableCell>
-                        {puzzle.createdAt ? new Date(puzzle.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {'★'.repeat(puzzle.difficulty)}{'☆'.repeat(5 - puzzle.difficulty)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={puzzle.isActive}
-                            onCheckedChange={() => handleActiveToggle(puzzle)}
-                          />
-                          <span className={puzzle.isActive ? 'text-green-600' : 'text-gray-500'}>
-                            {puzzle.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => navigate(`/admin/puzzle-submissions/${puzzle.id}`)}
-                            title="View Submissions"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span className="ml-1">Submissions</span>
-                            <Badge variant="secondary" className="ml-2 bg-white text-blue-600">
-                              {gradedCounts[puzzle.id!] || 0}/{submissionCounts[puzzle.id!] || 0}
-                            </Badge>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(puzzle)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteClick(puzzle)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        {/* Loading State */}
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading puzzles...</p>
+          </div>
+        ) : (
+          <>
+            {/* Current Active Puzzle */}
+            {renderPuzzleTable(activePuzzles, "Current Active Puzzle")}
+            
+            {/* Backlog Puzzles */}
+            {renderPuzzleTable(backlogPuzzles, "Backlog Puzzles (Candidates)", true)}
+            
+            {/* Archived Puzzles */}
+            {renderPuzzleTable(archivedPuzzles, "Archived Puzzles")}
+          </>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -544,21 +585,25 @@ const AdminPuzzles: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to {activeDialog.newStatus ? 'activate' : 'deactivate'} the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
-              <br /><br />
               {activeDialog.newStatus ? (
                 <>
+                  Are you sure you want to activate the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
+                  <br /><br />
                   <strong>Activating this puzzle will:</strong>
-                  <br />• Make it visible to all users
+                  <br />• Make it visible to all users on the POTW page
                   <br />• Allow users to submit solutions
-                  <br />• Automatically deactivate any other active puzzle
+                  <br />• Automatically archive any currently active puzzle
+                  <br />• Move this puzzle from backlog to active status
                 </>
               ) : (
                 <>
-                  <strong>Deactivating this puzzle will:</strong>
-                  <br />• Hide it from users
+                  Are you sure you want to archive the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
+                  <br /><br />
+                  <strong>Archiving this puzzle will:</strong>
+                  <br />• Hide it from users on the POTW page
                   <br />• Prevent new submissions
                   <br />• Keep existing submissions intact
+                  <br />• Move this puzzle to archived status
                 </>
               )}
             </AlertDialogDescription>
@@ -569,7 +614,7 @@ const AdminPuzzles: React.FC = () => {
               onClick={confirmActiveChange}
               className={activeDialog.newStatus ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}
             >
-              {activeDialog.newStatus ? 'Activate Puzzle' : 'Deactivate Puzzle'}
+              {activeDialog.newStatus ? 'Activate Puzzle' : 'Archive Puzzle'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

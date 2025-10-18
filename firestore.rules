@@ -24,10 +24,12 @@ service cloud.firestore {
     
     // PUZZLES COLLECTION
     match /puzzles/{puzzleId} {
-      // Admin and superadmin can read/write puzzles
+      // Admin and superadmin can read/write all puzzles
       allow read, write: if isAdmin();
-      // Regular users can only read puzzles
-      allow read: if isAuthenticated();
+      
+      // Regular users can only read active and archived puzzles (not backlog)
+      allow read: if isAuthenticated() && 
+        resource.data.status in ['active', 'archived'];
     }
     
     // USERS COLLECTION

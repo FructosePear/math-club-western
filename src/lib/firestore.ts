@@ -63,7 +63,9 @@ export interface Puzzle {
   solution?: string;
   createdAt: Timestamp;
   createdBy: string;
-  isActive: boolean;
+  status: 'backlog' | 'active' | 'archived';
+  activatedAt?: Timestamp;
+  archivedAt?: Timestamp;
   expiresAt?: Timestamp; // New field for expiration date
 }
 
@@ -403,32 +405,52 @@ export const puzzleService = {
     }
   },
 
-  // Get active puzzles only
-  async getActivePuzzles(): Promise<Puzzle[]> {
+  // Get puzzles by status
+  async getPuzzlesByStatus(status: 'backlog' | 'active' | 'archived'): Promise<Puzzle[]> {
     try {
       const q = query(
         collection(db, 'puzzles'),
-        where('isActive', '==', true),
-        orderBy('date', 'desc')
+        where('status', '==', status)
       );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const puzzles = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Puzzle[];
+      
+      // Sort in JavaScript to avoid index issues
+      puzzles.sort((a, b) => {
+        if (status === 'archived') {
+          // For archived, sort by archivedAt (most recent first)
+          const aTime = a.archivedAt?.toDate()?.getTime() || 0;
+          const bTime = b.archivedAt?.toDate()?.getTime() || 0;
+          return bTime - aTime;
+        } else {
+          // For backlog and active, sort by createdAt (most recent first)
+          const aTime = a.createdAt?.toDate()?.getTime() || 0;
+          const bTime = b.createdAt?.toDate()?.getTime() || 0;
+          return bTime - aTime;
+        }
+      });
+      
+      return puzzles;
     } catch (error) {
-      console.error('Error getting active puzzles:', error);
+      console.error(`Error getting ${status} puzzles:`, error);
       return [];
     }
+  },
+
+  // Get active puzzles only (for backward compatibility)
+  async getActivePuzzles(): Promise<Puzzle[]> {
+    return this.getPuzzlesByStatus('active');
   },
 
   // Get current active puzzle (only one should be active)
   async getCurrentActivePuzzle(): Promise<Puzzle | null> {
     try {
-      // Simple query - just get active puzzles (no sorting, no index needed)
       const q = query(
         collection(db, 'puzzles'),
-        where('isActive', '==', true)
+        where('status', '==', 'active')
       );
       const querySnapshot = await getDocs(q);
       
@@ -462,11 +484,12 @@ export const puzzleService = {
     }
   },
 
-  // Create new puzzle (admin only)
-  async createPuzzle(puzzle: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy'>, createdBy: string): Promise<string> {
+  // Create new puzzle (admin only) - defaults to backlog status
+  async createPuzzle(puzzle: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy' | 'status'>, createdBy: string): Promise<string> {
     try {
       const docRef = await addDoc(collection(db, 'puzzles'), {
         ...puzzle,
+        status: 'backlog',
         createdAt: serverTimestamp(),
         createdBy: createdBy,
       });
@@ -488,30 +511,47 @@ export const puzzleService = {
     }
   },
 
-  // Set puzzle as active and deactivate all others
+  // Set puzzle as active and archive all others
   async setPuzzleActive(puzzleId: string): Promise<void> {
     try {
-      // First, deactivate all puzzles
-      const allPuzzlesQuery = query(collection(db, 'puzzles'));
-      const allPuzzlesSnapshot = await getDocs(allPuzzlesQuery);
+      // First, archive all currently active puzzles
+      const activePuzzlesQuery = query(collection(db, 'puzzles'), where('status', '==', 'active'));
+      const activePuzzlesSnapshot = await getDocs(activePuzzlesQuery);
       
-      const deactivatePromises = allPuzzlesSnapshot.docs.map(doc => 
-        updateDoc(doc.ref, { isActive: false })
+      const archivePromises = activePuzzlesSnapshot.docs.map(doc => 
+        updateDoc(doc.ref, { 
+          status: 'archived',
+          archivedAt: serverTimestamp()
+        })
       );
-      await Promise.all(deactivatePromises);
+      await Promise.all(archivePromises);
       
       // Then, activate the selected puzzle
       const puzzleRef = doc(db, 'puzzles', puzzleId);
-      await updateDoc(puzzleRef, { isActive: true });
+      await updateDoc(puzzleRef, { 
+        status: 'active',
+        activatedAt: serverTimestamp()
+      });
     } catch (error) {
       console.error('Error setting puzzle active:', error);
       throw error;
     }
   },
 
-  // Delete puzzle (admin only)
+  // Get archived puzzles for users (public access)
+  async getArchivedPuzzles(): Promise<Puzzle[]> {
+    return this.getPuzzlesByStatus('archived');
+  },
+
+  // Delete puzzle (admin only) - cannot delete active puzzles
   async deletePuzzle(puzzleId: string): Promise<void> {
     try {
+      // First check if puzzle is active
+      const puzzle = await this.getPuzzle(puzzleId);
+      if (puzzle?.status === 'active') {
+        throw new Error('Cannot delete active puzzle. Please deactivate it first.');
+      }
+      
       await deleteDoc(doc(db, 'puzzles', puzzleId));
     } catch (error) {
       console.error('Error deleting puzzle:', error);
