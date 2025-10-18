@@ -46,30 +46,39 @@ export default function ProblemOfTheWeek() {
 	const [activeSection, setActiveSection] = useState("homebase");
 	const [expandedPuzzleId, setExpandedPuzzleId] = useState<string | null>(null);
 
-	useEffect(() => {
-		(async () => {
-			try {
-				setLoading(true);
-				// Get active puzzle
-				const activePuzzle = await puzzleService.getCurrentActivePuzzle();
-				
-				// Get all puzzles for archive
-				const all = await puzzleService.getPuzzles();
-				setAllPuzzles(all);
+	const loadPuzzleData = async () => {
+		try {
+			setLoading(true);
+			// Get active puzzle
+			const activePuzzle = await puzzleService.getCurrentActivePuzzle();
+			
+			// Get all puzzles for archive
+			const all = await puzzleService.getPuzzles();
+			setAllPuzzles(all);
 
-				if (activePuzzle) {
-					setPuzzles([activePuzzle]);
-				} else {
-					setPuzzles([]);
-				}
-			} catch (e: unknown) {
-				console.error('Error loading puzzles:', e);
-				setError(getErrorMessage(e));
-			} finally {
-				setLoading(false);
+			if (activePuzzle) {
+				setPuzzles([activePuzzle]);
+			} else {
+				setPuzzles([]);
 			}
-		})();
+		} catch (e: unknown) {
+			console.error('Error loading puzzles:', e);
+			setError(getErrorMessage(e));
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		loadPuzzleData();
 	}, []);
+
+	// Reload data when switching to archive section
+	useEffect(() => {
+		if (activeSection === "archive") {
+			loadPuzzleData();
+		}
+	}, [activeSection]);
 
 	const potwID = puzzles?.[0]?.id;
 
@@ -82,7 +91,126 @@ export default function ProblemOfTheWeek() {
 	const renderContent = () => {
 		if (loading) return <div className="p-6">Loading…</div>;
 		if (error) return <div className="p-6 text-red-600">{error}</div>;
-		if (!puzzle) return <div className="p-6">No puzzle yet. Check back soon!</div>;
+		
+		// Handle archive section separately since it doesn't need an active puzzle
+		if (activeSection === "archive") {
+			return (
+				<div className="space-y-4">
+					<header className="mb-6">
+						<h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
+						<p className="mt-1 text-sm text-gray-500">
+							Browse all past Problem of the Week challenges
+						</p>
+					</header>
+
+					{allPuzzles.filter(p => p.status === 'archived').length === 0 ? (
+						<div className="text-center py-8 text-gray-500">
+							No archived puzzles found yet.
+						</div>
+					) : (
+						<div className="space-y-2">
+							{allPuzzles.filter(p => p.status === 'archived').map((p) => (
+								<Card key={p.id} className="overflow-hidden">
+									<button
+										onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
+										className="w-full text-left"
+									>
+										<CardHeader className="pb-3">
+											<div className="flex items-center justify-between">
+												<div className="flex-1">
+													<div className="flex items-center gap-3">
+														<CardTitle className="text-lg">{p.title}</CardTitle>
+													</div>
+													<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+														<span>
+															{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+														</span>
+														<span>
+															{getStars(p.difficulty)}
+														</span>
+													</div>
+												</div>
+												{expandedPuzzleId === p.id ? (
+													<ChevronUp className="h-5 w-5 text-gray-500" />
+												) : (
+													<ChevronDown className="h-5 w-5 text-gray-500" />
+												)}
+											</div>
+										</CardHeader>
+									</button>
+									
+									{expandedPuzzleId === p.id && (
+										<CardContent className="pt-0 border-t">
+											<div className="space-y-4 mt-4">
+												{p.image && (
+													<img
+														src={p.image.startsWith('http') ? p.image : withBase(p.image)}
+														alt={p.title}
+														className="w-full rounded-lg border object-contain max-h-96"
+													/>
+												)}
+												<div>
+													<h4 className="font-semibold text-gray-900 mb-2">Problem Statement:</h4>
+													<p className="whitespace-pre-wrap text-gray-700">{p.prompt}</p>
+												</div>
+												{p.solution && (
+													<div>
+														<h4 className="font-semibold text-gray-900 mb-2">Solution:</h4>
+														<p className="whitespace-pre-wrap text-gray-700">{p.solution}</p>
+													</div>
+												)}
+												{p.correctAnswer && (
+													<div>
+														<h4 className="font-semibold text-gray-900 mb-2">Correct Answer:</h4>
+														<p className="text-gray-700">{p.correctAnswer}</p>
+													</div>
+												)}
+											</div>
+										</CardContent>
+									)}
+								</Card>
+							))}
+						</div>
+					)}
+				</div>
+			);
+		}
+		
+		// Handle sections that require an active puzzle
+		if (!puzzle) {
+			if (activeSection === "homebase") {
+				return (
+					<div className="p-6 text-center">
+						<h2 className="text-xl font-semibold text-gray-700 mb-2">No Active Puzzle</h2>
+						<p className="text-gray-500 mb-4">There's no Problem of the Week available right now.</p>
+						<p className="text-sm text-gray-400">
+							Check the <button 
+								onClick={() => setActiveSection("archive")}
+								className="text-blue-600 hover:text-blue-800 underline"
+							>
+								POTW Archive
+							</button> to see past puzzles.
+						</p>
+					</div>
+				);
+			} else if (activeSection === "leaderboard") {
+				return (
+					<div className="p-6 text-center">
+						<h2 className="text-xl font-semibold text-gray-700 mb-2">No Active Puzzle</h2>
+						<p className="text-gray-500 mb-4">There's no active Problem of the Week to show leaderboard for.</p>
+						<p className="text-sm text-gray-400">
+							Check the <button 
+								onClick={() => setActiveSection("archive")}
+								className="text-blue-600 hover:text-blue-800 underline"
+							>
+								POTW Archive
+							</button> to see past puzzles and their leaderboards.
+						</p>
+					</div>
+				);
+			}
+			return <div className="p-6">No puzzle yet. Check back soon!</div>;
+		}
 
 		switch (activeSection) {
 			case "homebase":
@@ -170,88 +298,6 @@ export default function ProblemOfTheWeek() {
 					</div>
 				);
 			
-			case "archive":
-				return (
-					<div className="space-y-4">
-						<header className="mb-6">
-							<h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
-							<p className="mt-1 text-sm text-gray-500">
-								Browse all past Problem of the Week challenges
-							</p>
-						</header>
-
-						{allPuzzles.filter(p => p.status === 'archived').length === 0 ? (
-							<div className="text-center py-8 text-gray-500">
-								No archived puzzles found yet.
-							</div>
-						) : (
-							<div className="space-y-2">
-								{allPuzzles.filter(p => p.status === 'archived').map((p) => (
-									<Card key={p.id} className="overflow-hidden">
-										<button
-											onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
-											className="w-full text-left"
-										>
-											<CardHeader className="pb-3">
-												<div className="flex items-center justify-between">
-													<div className="flex-1">
-														<div className="flex items-center gap-3">
-															<CardTitle className="text-lg">{p.title}</CardTitle>
-														</div>
-														<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-															<span>
-																{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-															</span>
-															<span>
-																{getStars(p.difficulty)}
-															</span>
-														</div>
-													</div>
-													{expandedPuzzleId === p.id ? (
-														<ChevronUp className="h-5 w-5 text-gray-500" />
-													) : (
-														<ChevronDown className="h-5 w-5 text-gray-500" />
-													)}
-												</div>
-											</CardHeader>
-										</button>
-										
-										{expandedPuzzleId === p.id && (
-											<CardContent className="pt-0 border-t">
-												<div className="space-y-4 mt-4">
-													{p.image && (
-														<img
-															src={p.image.startsWith('http') ? p.image : withBase(p.image)}
-															alt={p.title}
-															className="w-full rounded-lg border object-contain max-h-96"
-														/>
-													)}
-													<div>
-														<h4 className="font-semibold text-gray-900 mb-2">Problem Statement:</h4>
-														<p className="whitespace-pre-wrap text-gray-700">{p.prompt}</p>
-													</div>
-													{p.solution && (
-														<div>
-															<h4 className="font-semibold text-gray-900 mb-2">Solution:</h4>
-															<p className="whitespace-pre-wrap text-gray-700">{p.solution}</p>
-														</div>
-													)}
-													{p.correctAnswer && (
-														<div>
-															<h4 className="font-semibold text-gray-900 mb-2">Correct Answer:</h4>
-															<p className="text-gray-700">{p.correctAnswer}</p>
-														</div>
-													)}
-												</div>
-											</CardContent>
-										)}
-									</Card>
-								))}
-							</div>
-						)}
-					</div>
-				);
-
 			default:
 				return null;
 		}
