@@ -98,7 +98,7 @@ export default function ProblemOfTheWeek() {
 									</p>
 								</div>
 								
-								{/* Countdown Timer */}
+								{/* Countdown Timer - Only show if expiry is set */}
 								{puzzle.expiresAt && (
 									<div className="ml-4">
 										<CountdownTimer 
@@ -352,7 +352,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 		e.preventDefault();
 		if (submitted || !currentUser) return;
 
-		// Check if puzzle has expired
+		// Check if puzzle has expired (only if expiry is set)
 		if (puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000)) {
 			setError("This puzzle has expired! Submissions are no longer accepted.");
 			return;
@@ -397,6 +397,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 
 	return (
 		<div className="rounded-xl border p-4">
+			<h3 className="mb-4 text-lg font-semibold">Submit Your Answer</h3>
 
 			{!currentUser ? (
 				<div className="text-center py-8">

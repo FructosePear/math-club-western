@@ -13,7 +13,8 @@ import {
   limit,
   onSnapshot,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  deleteField
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -504,7 +505,18 @@ export const puzzleService = {
   async updatePuzzle(puzzleId: string, updates: Partial<Puzzle>): Promise<void> {
     try {
       const puzzleRef = doc(db, 'puzzles', puzzleId);
-      await updateDoc(puzzleRef, updates);
+      
+      // Handle undefined values by using deleteField
+      const firestoreUpdates: any = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === undefined) {
+          firestoreUpdates[key] = deleteField();
+        } else {
+          firestoreUpdates[key] = value;
+        }
+      });
+      
+      await updateDoc(puzzleRef, firestoreUpdates);
     } catch (error) {
       console.error('Error updating puzzle:', error);
       throw error;

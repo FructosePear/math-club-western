@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Plus, Edit, Trash2, Eye, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -67,6 +67,39 @@ const AdminPuzzles: React.FC = () => {
     image: '',
     expiresAt: '',
   });
+  const [originalFormData, setOriginalFormData] = useState<PuzzleFormData | null>(null);
+  const [hasFormChanges, setHasFormChanges] = useState(false);
+
+  // Check if form has changes
+  const checkForChanges = () => {
+    if (!originalFormData) {
+      setHasFormChanges(false);
+      return false;
+    }
+    
+    // Normalize empty strings and null values for comparison
+    const normalizeValue = (value: string) => value === '' ? null : value;
+    
+    // Compare each field individually
+    const changes = {
+      title: formData.title !== originalFormData.title,
+      prompt: formData.prompt !== originalFormData.prompt,
+      difficulty: formData.difficulty !== originalFormData.difficulty,
+      correctAnswer: formData.correctAnswer !== originalFormData.correctAnswer,
+      solution: formData.solution !== originalFormData.solution,
+      image: formData.image !== originalFormData.image,
+      expiresAt: normalizeValue(formData.expiresAt) !== normalizeValue(originalFormData.expiresAt),
+    };
+    
+    const hasAnyChanges = Object.values(changes).some(change => change);
+    setHasFormChanges(hasAnyChanges);
+    return hasAnyChanges;
+  };
+
+  // Check for changes whenever formData changes
+  useEffect(() => {
+    checkForChanges();
+  }, [formData, originalFormData]);
 
   useEffect(() => {
     loadPuzzles();
@@ -133,8 +166,12 @@ const AdminPuzzles: React.FC = () => {
           image: formData.image,
         };
         
+        // Handle expiry date - either set it or explicitly remove it
         if (formData.expiresAt) {
           updates.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
+        } else {
+          // Explicitly set to undefined to remove the field from Firestore
+          updates.expiresAt = undefined;
         }
         
         await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
@@ -167,6 +204,8 @@ const AdminPuzzles: React.FC = () => {
         image: '',
         expiresAt: '',
       });
+      setOriginalFormData(null); // Clear original data
+      setHasFormChanges(false); // Reset change state
       setEditingPuzzle(null);
       setIsDialogOpen(false);
       loadPuzzles();
@@ -177,7 +216,7 @@ const AdminPuzzles: React.FC = () => {
 
   const handleEdit = (puzzle: Puzzle) => {
     setEditingPuzzle(puzzle);
-    setFormData({
+    const newFormData = {
       title: puzzle.title,
       prompt: puzzle.prompt,
       difficulty: puzzle.difficulty,
@@ -185,7 +224,9 @@ const AdminPuzzles: React.FC = () => {
       solution: puzzle.solution || '',
       image: puzzle.image || '',
       expiresAt: puzzle.expiresAt ? new Date(puzzle.expiresAt.seconds * 1000).toISOString().slice(0, 16) : '',
-    });
+    };
+    setFormData(newFormData);
+    setOriginalFormData(newFormData); // Store original data for comparison
     setIsDialogOpen(true);
   };
 
@@ -281,6 +322,7 @@ const AdminPuzzles: React.FC = () => {
                 <TableHead>Title</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Difficulty</TableHead>
+                <TableHead>Expiry</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -296,6 +338,25 @@ const AdminPuzzles: React.FC = () => {
                     <Badge variant="outline">
                       {'★'.repeat(puzzle.difficulty)}{'☆'.repeat(5 - puzzle.difficulty)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {puzzle.expiresAt ? (
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          {new Date(puzzle.expiresAt.seconds * 1000).toLocaleDateString()}
+                        </div>
+                        <div className="text-gray-500">
+                          {new Date(puzzle.expiresAt.seconds * 1000).toLocaleTimeString()}
+                        </div>
+                        {new Date() > new Date(puzzle.expiresAt.seconds * 1000) && (
+                          <Badge variant="destructive" className="text-xs">
+                            Expired
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No expiry</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge 
@@ -433,6 +494,8 @@ const AdminPuzzles: React.FC = () => {
                   image: '',
                   expiresAt: '',
                 });
+                setOriginalFormData(null); // Clear original data for new puzzle
+                setHasFormChanges(false); // Reset change state
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add New Puzzle
@@ -456,16 +519,30 @@ const AdminPuzzles: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="expiresAt">Expiration Date & Time</Label>
-                  <Input
-                    id="expiresAt"
-                    type="datetime-local"
-                    value={formData.expiresAt}
-                    onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="expiresAt">Expiration Date & Time (Optional)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="expiresAt"
+                      type="datetime-local"
+                      value={formData.expiresAt}
+                      onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                      className="flex-1"
+                    />
+                    {formData.expiresAt && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, expiresAt: '' })}
+                        className="px-3"
+                        title="Remove expiry date"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    When should this puzzle expire? Students won't be able to submit after this time.
+                    Leave empty for no expiration. If set, students won't be able to submit after this time.
                   </p>
                 </div>
 
@@ -527,10 +604,19 @@ const AdminPuzzles: React.FC = () => {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button 
+                    type="submit" 
+                    disabled={editingPuzzle ? !hasFormChanges : false}
+                    title={editingPuzzle && !hasFormChanges ? "No changes made" : ""}
+                  >
                     {editingPuzzle ? 'Update Puzzle' : 'Create Puzzle'}
                   </Button>
                 </div>
+                {editingPuzzle && !hasFormChanges && (
+                  <p className="text-sm text-gray-500 text-center mt-2">
+                    Make changes to enable the Update button
+                  </p>
+                )}
               </form>
             </DialogContent>
           </Dialog>
@@ -557,7 +643,7 @@ const AdminPuzzles: React.FC = () => {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.isOpen} onOpenChange={setDeleteDialog}>
+      <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({ isOpen: open, puzzle: null })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Puzzle</AlertDialogTitle>
@@ -580,7 +666,7 @@ const AdminPuzzles: React.FC = () => {
       </AlertDialog>
 
       {/* Active Status Confirmation Dialog */}
-      <AlertDialog open={activeDialog.isOpen} onOpenChange={setActiveDialog}>
+      <AlertDialog open={activeDialog.isOpen} onOpenChange={(open) => setActiveDialog({ isOpen: open, puzzle: null, newStatus: false })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
