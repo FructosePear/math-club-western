@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Plus, Edit, Trash2, Eye, FileText } from 'lucide-react';
@@ -26,6 +27,13 @@ const AdminPuzzles: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    puzzle: Puzzle | null;
+  }>({
+    isOpen: false,
+    puzzle: null,
+  });
   
   type PuzzleFormData = {
     title: string;
@@ -169,15 +177,27 @@ const AdminPuzzles: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (puzzleId: string) => {
-    if (!confirm('Are you sure you want to delete this puzzle?')) return;
+  const handleDeleteClick = (puzzle: Puzzle) => {
+    setDeleteDialog({
+      isOpen: true,
+      puzzle: puzzle,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.puzzle) return;
 
     try {
-      await puzzleService.deletePuzzle(puzzleId);
+      await puzzleService.deletePuzzle(deleteDialog.puzzle.id!);
       loadPuzzles();
+      setDeleteDialog({ isOpen: false, puzzle: null });
     } catch (error) {
       console.error('Error deleting puzzle:', error);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialog({ isOpen: false, puzzle: null });
   };
 
   const toggleActive = async (puzzle: Puzzle) => {
@@ -449,7 +469,7 @@ const AdminPuzzles: React.FC = () => {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(puzzle.id!)}
+                            onClick={() => handleDeleteClick(puzzle)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -463,6 +483,29 @@ const AdminPuzzles: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.isOpen} onOpenChange={setDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Puzzle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the puzzle <strong>"{deleteDialog.puzzle?.title}"</strong>?
+              <br /><br />
+              This action cannot be undone. All submissions for this puzzle will also be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Puzzle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
