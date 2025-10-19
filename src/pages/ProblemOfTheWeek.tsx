@@ -36,11 +36,29 @@ function getStars(n: number): string {
 	return string;
 }
 
+function getGradeMessage(grade: number): string {
+	switch (grade) {
+		case 5:
+			return "Outstanding! Perfect solution! 🌟";
+		case 4:
+			return "Excellent work! Great solution! 👏";
+		case 3:
+			return "Good job! Solid understanding! 👍";
+		case 2:
+			return "Not quite there, but good effort! Keep trying! 💪";
+		case 1:
+			return "Keep practicing! You'll get it next time! 📚";
+		default:
+			return "Grade pending review.";
+	}
+}
+
 export default function ProblemOfTheWeek() {
 	const { id } = useParams<{ id?: string }>();
 	const { currentUser } = useAuth();
 	const [puzzles, setPuzzles] = useState<FirestorePuzzle[] | null>(null);
 	const [allPuzzles, setAllPuzzles] = useState<FirestorePuzzle[]>([]);
+	const [userSubmissions, setUserSubmissions] = useState<Record<string, any>>({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [activeSection, setActiveSection] = useState("homebase");
@@ -108,6 +126,25 @@ export default function ProblemOfTheWeek() {
 		return () => unsubscribe();
 	}, []);
 
+	// Real-time subscription to user submissions for archive grades
+	useEffect(() => {
+		if (!currentUser) return;
+
+		const unsubscribe = potwService.subscribeToUserSubmissions(
+			currentUser.uid,
+			(submissions) => {
+				// Create a map of puzzleId -> submission for quick lookup
+				const submissionMap: Record<string, any> = {};
+				submissions.forEach(submission => {
+					submissionMap[submission.puzzleId] = submission;
+				});
+				setUserSubmissions(submissionMap);
+			}
+		);
+
+		return () => unsubscribe();
+	}, [currentUser]);
+
 	// Reload data when switching to archive section
 	useEffect(() => {
 		if (activeSection === "archive") {
@@ -143,61 +180,116 @@ export default function ProblemOfTheWeek() {
 							No archived puzzles found yet.
 						</div>
 					) : (
-						<div className="space-y-2">
+						<div className="space-y-6">
 							{allPuzzles.filter(p => p.status === 'archived').map((p) => (
-								<Card key={p.id} className="overflow-hidden">
+								<Card key={p.id} className="overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
 									<button
 										onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
-										className="w-full text-left"
+										className="w-full text-left hover:bg-gray-50 transition-colors"
 									>
-										<CardHeader className="pb-3">
+										<CardHeader className="pb-4 px-6 py-5">
 											<div className="flex items-center justify-between">
 												<div className="flex-1">
-													<div className="flex items-center gap-3">
-														<CardTitle className="text-lg">{p.title}</CardTitle>
+													<div className="flex items-center gap-3 mb-3">
+														<CardTitle className="text-xl font-semibold text-gray-900">{p.title}</CardTitle>
 													</div>
-													<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-														<span>
-															{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+													<div className="flex items-center gap-6 text-sm text-gray-600">
+														<span className="flex items-center gap-1">
+															📅 {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
 														</span>
-														<span>
-															{getStars(p.difficulty)}
+														<span className="flex items-center gap-1">
+															⭐ {getStars(p.difficulty)}
 														</span>
+														{currentUser && userSubmissions[p.id!] && (
+															<span className="flex items-center gap-1">
+																{userSubmissions[p.id!].grade ? (
+																	<>
+																		<span className="text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-full text-xs">
+																			🎯 Grade: {userSubmissions[p.id!].grade}/5
+																		</span>
+																	</>
+																) : (
+																	<span className="text-orange-600 bg-orange-50 px-2 py-1 rounded-full text-xs">
+																		⏳ Submitted (pending review)
+																	</span>
+																)}
+															</span>
+														)}
 													</div>
 												</div>
-												{expandedPuzzleId === p.id ? (
-													<ChevronUp className="h-5 w-5 text-gray-500" />
-												) : (
-													<ChevronDown className="h-5 w-5 text-gray-500" />
-												)}
+												<div className="flex items-center gap-2">
+													<span className="text-xs text-gray-500">
+														{expandedPuzzleId === p.id ? 'Hide details' : 'View details'}
+													</span>
+													{expandedPuzzleId === p.id ? (
+														<ChevronUp className="h-5 w-5 text-gray-500" />
+													) : (
+														<ChevronDown className="h-5 w-5 text-gray-500" />
+													)}
+												</div>
 											</div>
 										</CardHeader>
 									</button>
 									
 									{expandedPuzzleId === p.id && (
-										<CardContent className="pt-0 border-t">
-											<div className="space-y-4 mt-4">
+										<CardContent className="pt-0 border-t bg-gray-50/50">
+											<div className="px-6 py-6 space-y-6">
 												{p.image && (
-													<img
-														src={p.image.startsWith('http') ? p.image : withBase(p.image)}
-														alt={p.title}
-														className="w-full rounded-lg border object-contain max-h-96"
-													/>
+													<div className="bg-white rounded-lg p-4 border border-gray-200">
+														<img
+															src={p.image.startsWith('http') ? p.image : withBase(p.image)}
+															alt={p.title}
+															className="w-full rounded-lg border object-contain max-h-96"
+														/>
+													</div>
 												)}
-												<div>
-													<h4 className="font-semibold text-gray-900 mb-2">Problem Statement:</h4>
-													<p className="whitespace-pre-wrap text-gray-700">{p.prompt}</p>
+												<div className="bg-white rounded-lg p-5 border border-gray-200">
+													<h4 className="font-semibold text-gray-900 mb-3 text-lg">Problem Statement</h4>
+													<p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{p.prompt}</p>
 												</div>
 												{p.solution && (
-													<div>
-														<h4 className="font-semibold text-gray-900 mb-2">Solution:</h4>
-														<p className="whitespace-pre-wrap text-gray-700">{p.solution}</p>
+													<div className="bg-white rounded-lg p-5 border border-gray-200">
+														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Solution</h4>
+														<p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{p.solution}</p>
 													</div>
 												)}
 												{p.correctAnswer && (
-													<div>
-														<h4 className="font-semibold text-gray-900 mb-2">Correct Answer:</h4>
-														<p className="text-gray-700">{p.correctAnswer}</p>
+													<div className="bg-white rounded-lg p-5 border border-gray-200">
+														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Correct Answer</h4>
+														<p className="text-gray-700 font-mono bg-gray-100 px-3 py-2 rounded border">{p.correctAnswer}</p>
+													</div>
+												)}
+												{currentUser && userSubmissions[p.id!] && (
+													<div className="bg-white rounded-lg p-5 border border-gray-200">
+														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Your Submission</h4>
+														{userSubmissions[p.id!].grade ? (
+															<div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+																<p className="text-blue-800 font-semibold mb-2 text-lg">
+																	🎯 Your Grade: {userSubmissions[p.id!].grade}/5
+																</p>
+																<p className="text-sm text-blue-600 mb-3">
+																	{getGradeMessage(userSubmissions[p.id!].grade)}
+																</p>
+																<div className="bg-white p-3 rounded border">
+																	<p className="text-sm text-gray-600">
+																		<strong>Your Answer:</strong>
+																	</p>
+																	<p className="text-gray-700 mt-1 whitespace-pre-wrap">{userSubmissions[p.id!].answer}</p>
+																</div>
+															</div>
+														) : (
+															<div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+																<p className="text-orange-800 font-semibold mb-2 text-lg">
+																	⏳ Submitted (pending review)
+																</p>
+																<div className="bg-white p-3 rounded border">
+																	<p className="text-sm text-gray-600">
+																		<strong>Your Answer:</strong>
+																	</p>
+																	<p className="text-gray-700 mt-1 whitespace-pre-wrap">{userSubmissions[p.id!].answer}</p>
+																</div>
+															</div>
+														)}
 													</div>
 												)}
 											</div>
@@ -409,6 +501,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 	const { currentUser } = useAuth();
 	const [answer, setAnswer] = useState("");
 	const [submitted, setSubmitted] = useState(false);
+	const [submissionData, setSubmissionData] = useState<any>(null);
 	const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error"
 	>("idle");
@@ -422,6 +515,7 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 				try {
 					const existingSubmission = await potwService.getUserSubmission(puzzleId, currentUser.uid);
 					setSubmitted(!!existingSubmission);
+					setSubmissionData(existingSubmission);
 				} catch (error) {
 					console.error('Error checking submission:', error);
 				}
@@ -429,6 +523,28 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 		};
 		checkSubmission();
 	}, [puzzleId, currentUser]);
+
+	// Real-time listener for submission updates (including grades)
+	useEffect(() => {
+		if (!currentUser || !puzzleId) return;
+
+		const unsubscribe = potwService.subscribeToUserSubmissions(
+			currentUser.uid,
+			(submissions) => {
+				// Find submission for this specific puzzle
+				const puzzleSubmission = submissions.find(sub => sub.puzzleId === puzzleId);
+				if (puzzleSubmission) {
+					setSubmitted(true);
+					setSubmissionData(puzzleSubmission);
+				} else {
+					setSubmitted(false);
+					setSubmissionData(null);
+				}
+			}
+		);
+
+		return () => unsubscribe();
+	}, [currentUser, puzzleId]);
 
 	const handleSubmitClick = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -496,9 +612,20 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 					<p className="text-green-600 font-medium">
 						✅ You have already submitted your answer for this puzzle!
 					</p>
-					<p className="text-sm text-gray-600 mt-2">
-						Thank you for participating in the Problem of the Week!
-					</p>
+					{submissionData?.grade ? (
+						<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+							<p className="text-blue-800 font-semibold">
+								🎯 Your Grade: {submissionData.grade}/5
+							</p>
+							<p className="text-sm text-blue-600 mt-1">
+								{getGradeMessage(submissionData.grade)}
+							</p>
+						</div>
+					) : (
+						<p className="text-sm text-gray-600 mt-2">
+							Thank you for participating! Your submission is being reviewed.
+						</p>
+					)}
 				</div>
 			) : puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000) ? (
 				<div className="text-center py-4">
