@@ -144,46 +144,50 @@ const UserDashboard: React.FC = () => {
                 </Link>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Puzzle</TableHead>
-                    <TableHead>Answer</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Submitted</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell className="font-medium">
+              <div className="space-y-4">
+                {submissions.map((submission) => (
+                  <Card key={submission.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
                         <div>
-                          <div className="font-semibold">{submission.puzzleName || 'Unknown Puzzle'}</div>
-                          <div className="text-xs text-gray-500">ID: {submission.puzzleId}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {submission.answer}
-                      </TableCell>
-                      <TableCell>
-                        {submission.grade ? (
-                          <Badge variant="default" className="bg-green-500 text-white font-semibold px-2 py-1">
-                            {submission.grade}/5
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-500">Pending</span>
-                            <Badge variant="secondary">⏳</Badge>
+                          <h4 className="font-semibold text-gray-900">
+                            {submission.puzzleName || 'Unknown Puzzle'}
+                          </h4>
+                          <div className="text-xs text-gray-500 mt-1">
+                            ID: {submission.puzzleId} • Submitted: {submission.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {submission.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </div>
+                        <div className="text-right">
+                          {submission.grade ? (
+                            <Badge variant="default" className="bg-green-500 text-white font-semibold px-3 py-1">
+                              {submission.grade}/5
+                            </Badge>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-500 text-sm">Pending</span>
+                              <Badge variant="secondary">⏳</Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 border">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-gray-700 text-sm">Your Solution</h5>
+                          <div className="text-xs text-gray-500">
+                            {submission.answer.length} characters
+                          </div>
+                        </div>
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 bg-white p-3 rounded border overflow-x-auto max-h-32 overflow-y-auto">
+                            {submission.answer}
+                          </pre>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

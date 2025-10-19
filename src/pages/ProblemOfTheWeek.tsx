@@ -639,18 +639,38 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 			) : (
 				<div>
 					<form onSubmit={handleSubmitClick} className="space-y-3">
-						<textarea
-							placeholder="Your solution / reasoning"
-							value={answer}
-							onChange={(e) => setAnswer(e.target.value)}
-							className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
-							required
-						/>
+						<div>
+							<textarea
+								placeholder="Your solution / reasoning"
+								value={answer}
+								onChange={(e) => setAnswer(e.target.value)}
+								className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
+								required
+								maxLength={3000}
+							/>
+							<div className="flex justify-between items-center mt-1">
+								<div className="text-xs text-gray-500">
+									{answer.length > 2500 && (
+										<span className="text-orange-600 font-medium">
+											⚠️ Approaching character limit
+										</span>
+									)}
+									{answer.length >= 3000 && (
+										<span className="text-red-600 font-medium">
+											🚫 Character limit reached
+										</span>
+									)}
+								</div>
+								<div className="text-xs text-gray-500">
+									{answer.length}/3000 characters
+								</div>
+							</div>
+						</div>
 
 						<div className="flex items-center gap-3">
 							<button
 								type="submit"
-								disabled={status === "submitting"}
+								disabled={status === "submitting" || answer.length === 0 || answer.length > 3000}
 								className="rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
 							>
 								{status === "submitting" ? "Submitting…" : "Submit Answer"}
@@ -663,9 +683,10 @@ function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; pu
 					</form>
 				</div>
 			)}
-			<p className="mt-2 text-xs text-gray-500">
-				IMPORTANT: You can only submit an answer once!
-			</p>
+			<div className="mt-2 text-xs text-gray-500 space-y-1">
+				<p><strong>IMPORTANT:</strong> You can only submit an answer once!</p>
+				<p>💡 <strong>Character limit:</strong> 3000 characters (enough for detailed math solutions with equations and explanations)</p>
+			</div>
 
 			{/* Submit Confirmation Dialog */}
 			<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

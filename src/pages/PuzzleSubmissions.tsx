@@ -235,7 +235,7 @@ const PuzzleSubmissions: React.FC = () => {
           </Card>
         </div>
 
-        {/* Submissions Table */}
+        {/* Submissions Cards */}
         <Card>
           <CardHeader>
             <CardTitle>All Submissions</CardTitle>
@@ -246,76 +246,109 @@ const PuzzleSubmissions: React.FC = () => {
                 <p className="text-gray-500">No submissions yet.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Answer</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-gray-400" />
+              <div className="space-y-6">
+                {submissions.map((submission) => (
+                  <Card key={submission.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      {/* Student Info Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
                           <div>
-                            <div className="font-medium">{submission.userName}</div>
+                            <div className="font-semibold text-gray-900">{submission.userName}</div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <Mail className="h-3 w-3 mr-1" />
                               {submission.userEmail}
                             </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Submitted: {submission.createdAt?.toDate?.()?.toLocaleString() || 'N/A'}
+                            </div>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate" title={submission.answer}>
-                          {submission.answer}
+                        
+                        {/* Grade Section */}
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <div className={`text-lg font-semibold ${getGradeColor(submission.grade)}`}>
+                              {submission.grade ? `${submission.grade}/5` : 'Not graded'}
+                            </div>
+                            {submission.grade && (
+                              <div className="text-sm text-gray-500">
+                                {getGradeStars(submission.grade)}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Grade Selector */}
+                          <div className="flex items-center space-x-2">
+                            <Select
+                              value={submission.grade?.toString() || ''}
+                              onValueChange={(value) => handleGradeChange(submission, parseInt(value))}
+                              disabled={updating === submission.id}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select grade" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">
+                                  <div className="flex items-center space-x-2">
+                                    <span>1/5</span>
+                                    <span className="text-xs text-gray-500">• Keep practicing!</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="2">
+                                  <div className="flex items-center space-x-2">
+                                    <span>2/5</span>
+                                    <span className="text-xs text-gray-500">• Good effort!</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="3">
+                                  <div className="flex items-center space-x-2">
+                                    <span>3/5</span>
+                                    <span className="text-xs text-gray-500">• Nice work!</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="4">
+                                  <div className="flex items-center space-x-2">
+                                    <span>4/5</span>
+                                    <span className="text-xs text-gray-500">• Excellent work!</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="5">
+                                  <div className="flex items-center space-x-2">
+                                    <span>5/5</span>
+                                    <span className="text-xs text-gray-500">• Outstanding!</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {updating === submission.id && (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            )}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {submission.createdAt?.toDate?.()?.toLocaleString() || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <span className={`font-medium ${getGradeColor(submission.grade)}`}>
-                            {submission.grade ? `${submission.grade}/5` : 'Not graded'}
-                          </span>
-                          {submission.grade && (
-                            <span className="text-sm text-gray-500">
-                              {getGradeStars(submission.grade)}
-                            </span>
-                          )}
+                      </div>
+                      
+                      {/* Answer Content */}
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-gray-700">Student's Solution</h4>
+                          <div className="text-xs text-gray-500">
+                            {submission.answer.length} characters
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={submission.grade?.toString() || ''}
-                          onValueChange={(value) => handleGradeChange(submission, parseInt(value))}
-                          disabled={updating === submission.id}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue placeholder="Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1/5</SelectItem>
-                            <SelectItem value="2">2/5</SelectItem>
-                            <SelectItem value="3">3/5</SelectItem>
-                            <SelectItem value="4">4/5</SelectItem>
-                            <SelectItem value="5">5/5</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {updating === submission.id && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mt-2"></div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 bg-white p-3 rounded border overflow-x-auto">
+                            {submission.answer}
+                          </pre>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
