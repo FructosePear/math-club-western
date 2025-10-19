@@ -105,6 +105,50 @@ const AdminPuzzles: React.FC = () => {
     loadPuzzles();
   }, []);
 
+  // Real-time subscription to all puzzles
+  useEffect(() => {
+    const unsubscribe = puzzleService.subscribeToAllPuzzles((puzzles) => {
+      const activeList = puzzles.filter(p => p.status === 'active');
+      const backlogList = puzzles.filter(p => p.status === 'backlog');
+      const archivedList = puzzles.filter(p => p.status === 'archived');
+      
+      setActivePuzzles(activeList);
+      setBacklogPuzzles(backlogList);
+      setArchivedPuzzles(archivedList);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time subscription to all submissions for updating counts
+  useEffect(() => {
+    const unsubscribe = potwService.subscribeToAllSubmissions((submissions) => {
+      // Group submissions by puzzle ID
+      const puzzleSubmissions: Record<string, any[]> = {};
+      submissions.forEach(submission => {
+        if (!puzzleSubmissions[submission.puzzleId]) {
+          puzzleSubmissions[submission.puzzleId] = [];
+        }
+        puzzleSubmissions[submission.puzzleId].push(submission);
+      });
+
+      // Calculate counts for each puzzle
+      const counts: Record<string, number> = {};
+      const gradedCounts: Record<string, number> = {};
+      
+      Object.keys(puzzleSubmissions).forEach(puzzleId => {
+        const puzzleSubs = puzzleSubmissions[puzzleId];
+        counts[puzzleId] = puzzleSubs.length;
+        gradedCounts[puzzleId] = puzzleSubs.filter(sub => sub.grade).length;
+      });
+
+      setSubmissionCounts(counts);
+      setGradedCounts(gradedCounts);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const loadPuzzles = async () => {
     try {
       setLoading(true);

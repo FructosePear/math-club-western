@@ -19,15 +19,14 @@ const UserDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!currentUser) return;
+    if (!currentUser) return;
 
-      try {
-        setLoading(true);
-        
-        // Get user submissions
-        const userSubmissions = await userService.getUserSubmissions(currentUser.uid);
+    // Real-time subscription to user submissions
+    const unsubscribe = potwService.subscribeToUserSubmissions(
+      currentUser.uid,
+      (userSubmissions) => {
         setSubmissions(userSubmissions);
+        setLoading(false);
 
         // Calculate stats from submissions using grade field
         const totalSubmissions = userSubmissions.length;
@@ -41,14 +40,10 @@ const UserDashboard: React.FC = () => {
           correctSubmissions: gradedSubmissions.length, // Count graded submissions
           averageScore: averageGrade * 20 // Convert 1-5 scale to percentage (1=20%, 5=100%)
         });
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+    );
 
-    loadUserData();
+    return () => unsubscribe();
   }, [currentUser]);
 
   if (!currentUser) {

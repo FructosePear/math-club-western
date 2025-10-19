@@ -73,6 +73,51 @@ const AdminUsers: React.FC = () => {
     loadCurrentUserProfile();
   }, []);
 
+  // Real-time subscription to all users
+  useEffect(() => {
+    const unsubscribe = userService.subscribeToAllUsers((users) => {
+      setUsers(users);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time subscription to all submissions for admin
+  useEffect(() => {
+    const unsubscribe = potwService.subscribeToAllSubmissions((submissions) => {
+      // Update latest submission dates for each user
+      const submissionDates: Record<string, Date | null> = {};
+      
+      // Group submissions by user
+      const userSubmissions: Record<string, any[]> = {};
+      submissions.forEach(submission => {
+        if (!userSubmissions[submission.userId]) {
+          userSubmissions[submission.userId] = [];
+        }
+        userSubmissions[submission.userId].push(submission);
+      });
+      
+      // Find latest submission for each user
+      Object.keys(userSubmissions).forEach(userId => {
+        const userSubs = userSubmissions[userId];
+        if (userSubs.length > 0) {
+          const latest = userSubs.reduce((latest, current) => {
+            const latestTime = latest.createdAt?.toDate()?.getTime() || 0;
+            const currentTime = current.createdAt?.toDate()?.getTime() || 0;
+            return currentTime > latestTime ? current : latest;
+          });
+          submissionDates[userId] = latest.createdAt?.toDate() || null;
+        } else {
+          submissionDates[userId] = null;
+        }
+      });
+      
+      setLatestSubmissions(submissionDates);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const loadUsers = async () => {
     try {
       setLoading(true);

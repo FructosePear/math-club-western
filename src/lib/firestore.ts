@@ -243,6 +243,56 @@ export const potwService = {
       const limitedSubmissions = submissions.slice(0, 50);
       callback(limitedSubmissions);
     });
+  },
+
+  // Real-time subscription to user's submissions
+  subscribeToUserSubmissions(
+    userId: string,
+    callback: (submissions: POTWSubmission[]) => void
+  ) {
+    const q = query(
+      collection(db, 'potw_submissions'),
+      where('userId', '==', userId)
+    );
+
+    return onSnapshot(q, (querySnapshot) => {
+      const submissions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as POTWSubmission[];
+      
+      // Sort by creation time (newest first)
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime;
+      });
+      
+      callback(submissions);
+    });
+  },
+
+  // Real-time subscription to all submissions (admin only)
+  subscribeToAllSubmissions(
+    callback: (submissions: POTWSubmission[]) => void
+  ) {
+    const q = query(collection(db, 'potw_submissions'));
+
+    return onSnapshot(q, (querySnapshot) => {
+      const submissions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as POTWSubmission[];
+      
+      // Sort by creation time (newest first)
+      submissions.sort((a, b) => {
+        const aTime = a.createdAt?.toDate()?.getTime() || 0;
+        const bTime = b.createdAt?.toDate()?.getTime() || 0;
+        return bTime - aTime;
+      });
+      
+      callback(submissions);
+    });
   }
 };
 
@@ -350,6 +400,27 @@ export const userService = {
       console.error('Error getting all users:', error);
       throw error;
     }
+  },
+
+  // Real-time subscription to all users (admin only)
+  subscribeToAllUsers(callback: (users: UserProfile[]) => void) {
+    const q = query(collection(db, 'users'));
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserProfile[];
+      
+      // Sort by creation time (newest first)
+      users.sort((a, b) => {
+        const aTime = a.firebaseCreatedAt?.toDate()?.getTime() || 0;
+        const bTime = b.firebaseCreatedAt?.toDate()?.getTime() || 0;
+        return bTime - aTime;
+      });
+      
+      callback(users);
+    });
   },
 
   // Update user role (admin only)
@@ -553,6 +624,63 @@ export const puzzleService = {
   // Get archived puzzles for users (public access)
   async getArchivedPuzzles(): Promise<Puzzle[]> {
     return this.getPuzzlesByStatus('archived');
+  },
+
+  // Real-time subscription to active puzzle
+  subscribeToActivePuzzle(callback: (puzzle: Puzzle | null) => void) {
+    const q = query(
+      collection(db, 'puzzles'),
+      where('status', '==', 'active')
+    );
+    
+    return onSnapshot(q, (querySnapshot) => {
+      if (querySnapshot.empty) {
+        callback(null);
+        return;
+      }
+      
+      const doc = querySnapshot.docs[0];
+      const puzzle = {
+        id: doc.id,
+        ...doc.data()
+      } as Puzzle;
+      
+      callback(puzzle);
+    });
+  },
+
+  // Real-time subscription to puzzles by status
+  subscribeToPuzzlesByStatus(
+    status: 'backlog' | 'active' | 'archived',
+    callback: (puzzles: Puzzle[]) => void
+  ) {
+    const q = query(
+      collection(db, 'puzzles'),
+      where('status', '==', status)
+    );
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const puzzles = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Puzzle[];
+      
+      callback(puzzles);
+    });
+  },
+
+  // Real-time subscription to all puzzles (for admin)
+  subscribeToAllPuzzles(callback: (puzzles: Puzzle[]) => void) {
+    const q = query(collection(db, 'puzzles'));
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const puzzles = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Puzzle[];
+      
+      callback(puzzles);
+    });
   },
 
   // Delete puzzle (admin only) - cannot delete active puzzles

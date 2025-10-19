@@ -82,6 +82,32 @@ export default function ProblemOfTheWeek() {
 		loadPuzzleData();
 	}, []);
 
+	// Real-time subscription to active puzzle
+	useEffect(() => {
+		const unsubscribe = puzzleService.subscribeToActivePuzzle((puzzle) => {
+			if (puzzle) {
+				setPuzzles([puzzle]);
+			} else {
+				setPuzzles([]);
+			}
+		});
+
+		return () => unsubscribe();
+	}, []);
+
+	// Real-time subscription to archived puzzles
+	useEffect(() => {
+		const unsubscribe = puzzleService.subscribeToPuzzlesByStatus('archived', (archivedPuzzles) => {
+			setAllPuzzles(prev => {
+				// Keep active puzzles and update archived ones
+				const activePuzzles = prev.filter(p => p.status === 'active');
+				return [...activePuzzles, ...archivedPuzzles];
+			});
+		});
+
+		return () => unsubscribe();
+	}, []);
+
 	// Reload data when switching to archive section
 	useEffect(() => {
 		if (activeSection === "archive") {
