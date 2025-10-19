@@ -41,6 +41,7 @@ const AdminPuzzles: React.FC = () => {
     isOpen: boolean;
     puzzle: Puzzle | null;
     newStatus: boolean;
+    ungradedCount?: number;
   }>({
     isOpen: false,
     puzzle: null,
@@ -305,12 +306,29 @@ const AdminPuzzles: React.FC = () => {
     });
   };
 
-  const handleArchivePuzzle = (puzzle: Puzzle) => {
-    setActiveDialog({
-      isOpen: true,
-      puzzle: puzzle,
-      newStatus: false, // false means archive
-    });
+  const handleArchivePuzzle = async (puzzle: Puzzle) => {
+    try {
+      // Check if there are ungraded submissions
+      const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
+      const ungradedSubmissions = submissions.filter(sub => !sub.grade);
+      
+      // Always show dialog, but include ungraded count for warning
+      setActiveDialog({
+        isOpen: true,
+        puzzle: puzzle,
+        newStatus: false, // false means archive
+        ungradedCount: ungradedSubmissions.length,
+      });
+    } catch (error) {
+      console.error('Error checking submissions before archive:', error);
+      // If there's an error checking submissions, still show the dialog
+      setActiveDialog({
+        isOpen: true,
+        puzzle: puzzle,
+        newStatus: false,
+        ungradedCount: 0,
+      });
+    }
   };
 
   const confirmActiveChange = async () => {
@@ -727,6 +745,23 @@ const AdminPuzzles: React.FC = () => {
                 </>
               ) : (
                 <>
+                  {activeDialog.ungradedCount && activeDialog.ungradedCount > 0 ? (
+                    <>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-orange-600 text-lg">⚠️</span>
+                          <strong className="text-orange-800">Ungraded Submissions Detected</strong>
+                        </div>
+                        <p className="text-orange-700 text-sm">
+                          This puzzle has <strong>{activeDialog.ungradedCount} ungraded submission{activeDialog.ungradedCount > 1 ? 's' : ''}</strong> that need to be reviewed before archiving.
+                        </p>
+                        <p className="text-orange-600 text-xs mt-2">
+                          Please grade all submissions first, or proceed with archiving if you're sure.
+                        </p>
+                      </div>
+                    </>
+                  ) : null}
+                  
                   Are you sure you want to archive the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
                   <br /><br />
                   <strong>Archiving this puzzle will:</strong>
@@ -734,6 +769,11 @@ const AdminPuzzles: React.FC = () => {
                   <br />• Prevent new submissions
                   <br />• Keep existing submissions intact
                   <br />• Move this puzzle to archived status
+                  {activeDialog.ungradedCount && activeDialog.ungradedCount > 0 && (
+                    <>
+                      <br />• <span className="text-orange-600">Ungraded submissions will remain ungraded</span>
+                    </>
+                  )}
                 </>
               )}
             </AlertDialogDescription>
@@ -742,9 +782,20 @@ const AdminPuzzles: React.FC = () => {
             <AlertDialogCancel onClick={cancelActiveChange}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmActiveChange}
-              className={activeDialog.newStatus ? "bg-green-600 hover:bg-green-700" : "bg-orange-600 hover:bg-orange-700"}
+              className={
+                activeDialog.newStatus 
+                  ? "bg-green-600 hover:bg-green-700" 
+                  : activeDialog.ungradedCount && activeDialog.ungradedCount > 0
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-orange-600 hover:bg-orange-700"
+              }
             >
-              {activeDialog.newStatus ? 'Activate Puzzle' : 'Archive Puzzle'}
+              {activeDialog.newStatus 
+                ? 'Activate Puzzle' 
+                : activeDialog.ungradedCount && activeDialog.ungradedCount > 0
+                  ? 'Archive Anyway (Ungraded)'
+                  : 'Archive Puzzle'
+              }
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
