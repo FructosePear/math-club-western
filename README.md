@@ -5,15 +5,18 @@ A simple math club website with Problem of the Week challenges.
 ## Quick Start
 
 1. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 2. **Set up Firebase**
+
    - Copy `env.example` to `.env`
    - Add your Firebase config to `.env`
 
 3. **Run locally**
+
    ```bash
    npm run dev
    ```
@@ -25,27 +28,35 @@ A simple math club website with Problem of the Week challenges.
 ### Firebase Hosting
 
 1. **Install Firebase CLI** (if not already installed)
+
    ```bash
    npm install -g firebase-tools
    ```
 
 2. **Login to Firebase**
+
    ```bash
    firebase login
    ```
 
 3. **Build the app**
+
    ```bash
    npm run build
    ```
 
 4. **Deploy to Firebase**
+
    ```bash
    firebase deploy
    ```
 
 5. **Your app will be live at:** (find url in firebase hosting)
 
+## Debug
+
+- Check Network and Browser console for database issues
+- Missing/insufficient perms: check security rules in Firebase
 
 ## Features
 
