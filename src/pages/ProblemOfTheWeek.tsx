@@ -230,7 +230,7 @@ export default function ProblemOfTheWeek() {
                                   : "N/A"}
                               </span>
                               <span className="flex items-center gap-1">
-                                ⭐ {getStars(p.difficulty)}
+                                Difficulty: {getStars(p.difficulty)}
                               </span>
                               {currentUser && userSubmissions[p.id!] && (
                                 <span className="flex items-center gap-1">
