@@ -147,8 +147,8 @@ const PuzzleSubmissions: React.FC = () => {
   };
 
   const getGradeStars = (grade?: number) => {
-    if (!grade) return "☆☆☆☆☆";
-    return "★".repeat(grade) + "☆".repeat(5 - grade);
+    if (!grade) return "Grade unavailable";
+    return "🌶️".repeat(grade);
   };
 
   if (!canManagePuzzles) {
@@ -220,11 +220,8 @@ const PuzzleSubmissions: React.FC = () => {
 
           <div className="flex items-center space-x-4 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
-              <Star className="h-4 w-4" />
-              <span>
-                {"★".repeat(puzzle.difficulty)}
-                {"☆".repeat(5 - puzzle.difficulty)}
-              </span>
+              <h1>Difficulty: </h1>
+              <span>{"🌶️".repeat(puzzle.difficulty)}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="h-4 w-4" />

@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { puzzleService, Puzzle } from '@/lib/firestore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Star, Clock } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { puzzleService, Puzzle } from "@/lib/firestore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Calendar, Star, Clock } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const POTWArchive: React.FC = () => {
   const [archivedPuzzles, setArchivedPuzzles] = useState<Puzzle[]>([]);
@@ -22,18 +22,18 @@ const POTWArchive: React.FC = () => {
       const puzzles = await puzzleService.getArchivedPuzzles();
       setArchivedPuzzles(puzzles);
     } catch (error) {
-      console.error('Error loading archived puzzles:', error);
+      console.error("Error loading archived puzzles:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const getStars = (difficulty: number) => {
-    return '★'.repeat(difficulty) + '☆'.repeat(5 - difficulty);
+    return "🌶️".repeat(difficulty);
   };
 
   const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return "N/A";
     return new Date(timestamp.seconds * 1000).toLocaleDateString();
   };
 
@@ -55,7 +55,7 @@ const POTWArchive: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
@@ -67,7 +67,7 @@ const POTWArchive: React.FC = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          
+
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             POTW Archive
           </h1>
@@ -94,7 +94,10 @@ const POTWArchive: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {archivedPuzzles.map((puzzle) => (
-              <Card key={puzzle.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={puzzle.id}
+                className="hover:shadow-lg transition-shadow"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg line-clamp-2">
@@ -153,7 +156,9 @@ const POTWArchive: React.FC = () => {
                         onClick={() => {
                           // Navigate to puzzle details or show in modal
                           // For now, just show an alert
-                          alert(`Viewing puzzle: ${puzzle.title}\n\nThis would show the full puzzle details.`);
+                          alert(
+                            `Viewing puzzle: ${puzzle.title}\n\nThis would show the full puzzle details.`
+                          );
                         }}
                       >
                         View Details

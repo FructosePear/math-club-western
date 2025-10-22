@@ -576,17 +576,31 @@ export const puzzleService = {
   async updatePuzzle(puzzleId: string, updates: Partial<Puzzle>): Promise<void> {
     try {
       const puzzleRef = doc(db, 'puzzles', puzzleId);
-      
+      // Normalize status transitions:
+      // - when moving to 'archived' and archivedAt wasn't provided, set serverTimestamp()
+      // - when moving away from 'archived', remove archivedAt
+      const normalizedUpdates: any = { ...updates };
+      if ('status' in updates) {
+        if (updates.status === 'archived') {
+          if (updates.archivedAt === undefined) {
+            normalizedUpdates.archivedAt = serverTimestamp();
+          }
+        } else {
+          // clear archivedAt when status is not archived
+          normalizedUpdates.archivedAt = deleteField();
+        }
+      }
+
       // Handle undefined values by using deleteField
       const firestoreUpdates: any = {};
-      Object.entries(updates).forEach(([key, value]) => {
+      Object.entries(normalizedUpdates).forEach(([key, value]) => {
         if (value === undefined) {
           firestoreUpdates[key] = deleteField();
         } else {
           firestoreUpdates[key] = value;
         }
       });
-      
+
       await updateDoc(puzzleRef, firestoreUpdates);
     } catch (error) {
       console.error('Error updating puzzle:', error);
@@ -613,7 +627,8 @@ export const puzzleService = {
       const puzzleRef = doc(db, 'puzzles', puzzleId);
       await updateDoc(puzzleRef, { 
         status: 'active',
-        activatedAt: serverTimestamp()
+        activatedAt: serverTimestamp(),
+        archivedAt: deleteField()
       });
     } catch (error) {
       console.error('Error setting puzzle active:', error);

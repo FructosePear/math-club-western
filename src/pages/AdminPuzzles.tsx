@@ -339,10 +339,9 @@ const AdminPuzzles: React.FC = () => {
         // Activate the puzzle (will archive any currently active puzzle)
         await puzzleService.setPuzzleActive(activeDialog.puzzle.id!);
       } else {
-        // Archive the puzzle
+        // Archive the puzzle (archivedAt will be set server-side)
         await puzzleService.updatePuzzle(activeDialog.puzzle.id!, {
-          status: 'archived',
-          archivedAt: new Date() as any
+          status: 'archived'
         });
       }
       loadPuzzles();
@@ -398,7 +397,7 @@ const AdminPuzzles: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {'★'.repeat(puzzle.difficulty)}{'☆'.repeat(5 - puzzle.difficulty)}
+                      {'🌶️'.repeat(puzzle.difficulty)}
                     </Badge>
                   </TableCell>
                   <TableCell>

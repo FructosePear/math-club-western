@@ -28,10 +28,7 @@ function getErrorMessage(e: unknown): string {
 function getStars(n: number): string {
 	let string = "";
 	for (let i = 0; i < n; i++) {
-		string += "★";
-	}
-	for (let i = 0; i < 5 - n; i++) {
-		string += "☆";
+		string += "🌶️";
 	}
 	return string;
 }
