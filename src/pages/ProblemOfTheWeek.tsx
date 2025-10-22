@@ -6,738 +6,882 @@ import { useParams, Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { potwService, puzzleService, Puzzle as FirestorePuzzle } from '@/lib/firestore';
-import { useAuth } from '@/contexts/AuthContext';
-import Leaderboard from '@/components/Leaderboard';
-import CountdownTimer from '@/components/CountdownTimer';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  potwService,
+  puzzleService,
+  Puzzle as FirestorePuzzle,
+} from "@/lib/firestore";
+import { useAuth } from "@/contexts/AuthContext";
+import Leaderboard from "@/components/Leaderboard";
+import CountdownTimer from "@/components/CountdownTimer";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const SUBMIT_KEY = (id: string) => `potw:submitted:${id}`;
 
 function getErrorMessage(e: unknown): string {
-	if (e instanceof Error) return e.message;
-	if (typeof e === "string") return e;
-	try {
-		return JSON.stringify(e);
-	} catch {
-		return "Unknown error";
-	}
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return "Unknown error";
+  }
 }
 
 function getStars(n: number): string {
-	let string = "";
-	for (let i = 0; i < n; i++) {
-		string += "🌶️";
-	}
-	return string;
+  let string = "";
+  for (let i = 0; i < n; i++) {
+    string += "🌶️";
+  }
+  return string;
 }
 
 function getGradeMessage(grade: number): string {
-	switch (grade) {
-		case 5:
-			return "Outstanding! Perfect solution! 🌟";
-		case 4:
-			return "Excellent work! Great solution! 👏";
-		case 3:
-			return "Good job! Solid understanding! 👍";
-		case 2:
-			return "Not quite there, but good effort! Keep trying! 💪";
-		case 1:
-			return "Keep practicing! You'll get it next time! 📚";
-		default:
-			return "Grade pending review.";
-	}
+  switch (grade) {
+    case 5:
+      return "Outstanding! Perfect solution! 🌟";
+    case 4:
+      return "Excellent work! Great solution! 👏";
+    case 3:
+      return "Good job! Solid understanding! 👍";
+    case 2:
+      return "Not quite there, but good effort! Keep trying! 💪";
+    case 1:
+      return "Keep practicing! You'll get it next time! 📚";
+    default:
+      return "Grade pending review.";
+  }
 }
 
 export default function ProblemOfTheWeek() {
-	const { id } = useParams<{ id?: string }>();
-	const { currentUser } = useAuth();
-	const [puzzles, setPuzzles] = useState<FirestorePuzzle[] | null>(null);
-	const [allPuzzles, setAllPuzzles] = useState<FirestorePuzzle[]>([]);
-	const [userSubmissions, setUserSubmissions] = useState<Record<string, any>>({});
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [activeSection, setActiveSection] = useState("homebase");
-	const [expandedPuzzleId, setExpandedPuzzleId] = useState<string | null>(null);
+  const { id } = useParams<{ id?: string }>();
+  const { currentUser } = useAuth();
+  const [puzzles, setPuzzles] = useState<FirestorePuzzle[] | null>(null);
+  const [allPuzzles, setAllPuzzles] = useState<FirestorePuzzle[]>([]);
+  const [userSubmissions, setUserSubmissions] = useState<Record<string, any>>(
+    {}
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState("homebase");
+  const [expandedPuzzleId, setExpandedPuzzleId] = useState<string | null>(null);
 
-	const loadPuzzleData = async () => {
-		try {
-			setLoading(true);
-			// Get active puzzle
-			const activePuzzle = await puzzleService.getCurrentActivePuzzle();
-			
-			// Get puzzles by status for better security rule compliance
-			const [activeList, archivedList] = await Promise.all([
-				puzzleService.getPuzzlesByStatus('active'),
-				puzzleService.getPuzzlesByStatus('archived')
-			]);
-			
-			console.log('Active puzzles:', activeList);
-			console.log('Archived puzzles:', archivedList);
-			
-			// Combine for allPuzzles (used in archive)
-			const all = [...activeList, ...archivedList];
-			setAllPuzzles(all);
+  const loadPuzzleData = async () => {
+    try {
+      setLoading(true);
+      // Get active puzzle
+      const activePuzzle = await puzzleService.getCurrentActivePuzzle();
 
-			if (activePuzzle) {
-				setPuzzles([activePuzzle]);
-			} else {
-				setPuzzles([]);
-			}
-		} catch (e: unknown) {
-			console.error('Error loading puzzles:', e);
-			setError(getErrorMessage(e));
-		} finally {
-			setLoading(false);
-		}
-	};
+      // Get puzzles by status for better security rule compliance
+      const [activeList, archivedList] = await Promise.all([
+        puzzleService.getPuzzlesByStatus("active"),
+        puzzleService.getPuzzlesByStatus("archived"),
+      ]);
 
-	useEffect(() => {
-		loadPuzzleData();
-	}, []);
+      console.log("Active puzzles:", activeList);
+      console.log("Archived puzzles:", archivedList);
 
-	// Real-time subscription to active puzzle
-	useEffect(() => {
-		const unsubscribe = puzzleService.subscribeToActivePuzzle((puzzle) => {
-			if (puzzle) {
-				setPuzzles([puzzle]);
-			} else {
-				setPuzzles([]);
-			}
-		});
+      // Combine for allPuzzles (used in archive)
+      const all = [...activeList, ...archivedList];
+      setAllPuzzles(all);
 
-		return () => unsubscribe();
-	}, []);
+      if (activePuzzle) {
+        setPuzzles([activePuzzle]);
+      } else {
+        setPuzzles([]);
+      }
+    } catch (e: unknown) {
+      console.error("Error loading puzzles:", e);
+      setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-	// Real-time subscription to archived puzzles
-	useEffect(() => {
-		const unsubscribe = puzzleService.subscribeToPuzzlesByStatus('archived', (archivedPuzzles) => {
-			setAllPuzzles(prev => {
-				// Keep active puzzles and update archived ones
-				const activePuzzles = prev.filter(p => p.status === 'active');
-				return [...activePuzzles, ...archivedPuzzles];
-			});
-		});
+  useEffect(() => {
+    loadPuzzleData();
+  }, []);
 
-		return () => unsubscribe();
-	}, []);
+  // Real-time subscription to active puzzle
+  useEffect(() => {
+    const unsubscribe = puzzleService.subscribeToActivePuzzle((puzzle) => {
+      if (puzzle) {
+        setPuzzles([puzzle]);
+      } else {
+        setPuzzles([]);
+      }
+    });
 
-	// Real-time subscription to user submissions for archive grades
-	useEffect(() => {
-		if (!currentUser) return;
+    return () => unsubscribe();
+  }, []);
 
-		const unsubscribe = potwService.subscribeToUserSubmissions(
-			currentUser.uid,
-			(submissions) => {
-				// Create a map of puzzleId -> submission for quick lookup
-				const submissionMap: Record<string, any> = {};
-				submissions.forEach(submission => {
-					submissionMap[submission.puzzleId] = submission;
-				});
-				setUserSubmissions(submissionMap);
-			}
-		);
+  // Real-time subscription to archived puzzles
+  useEffect(() => {
+    const unsubscribe = puzzleService.subscribeToPuzzlesByStatus(
+      "archived",
+      (archivedPuzzles) => {
+        setAllPuzzles((prev) => {
+          // Keep active puzzles and update archived ones
+          const activePuzzles = prev.filter((p) => p.status === "active");
+          return [...activePuzzles, ...archivedPuzzles];
+        });
+      }
+    );
 
-		return () => unsubscribe();
-	}, [currentUser]);
+    return () => unsubscribe();
+  }, []);
 
-	// Reload data when switching to archive section
-	useEffect(() => {
-		if (activeSection === "archive") {
-			loadPuzzleData();
-		}
-	}, [activeSection]);
+  // Real-time subscription to user submissions for archive grades
+  useEffect(() => {
+    if (!currentUser) return;
 
-	const potwID = puzzles?.[0]?.id;
+    const unsubscribe = potwService.subscribeToUserSubmissions(
+      currentUser.uid,
+      (submissions) => {
+        // Create a map of puzzleId -> submission for quick lookup
+        const submissionMap: Record<string, any> = {};
+        submissions.forEach((submission) => {
+          submissionMap[submission.puzzleId] = submission;
+        });
+        setUserSubmissions(submissionMap);
+      }
+    );
 
-	const puzzle = useMemo(() => {
-		if (!puzzles) return null;
-		if (id) return puzzles.find((p) => p.id === id) ?? null;
-		return puzzles[0] ?? null;
-	}, [puzzles, id]);
+    return () => unsubscribe();
+  }, [currentUser]);
 
-	const renderContent = () => {
-		if (loading) return <div className="p-6">Loading…</div>;
-		if (error) return <div className="p-6 text-red-600">{error}</div>;
-		
-		// Handle sections that don't need an active puzzle
-		if (activeSection === "archive") {
-			return (
-				<div className="space-y-4">
-					<header className="mb-6">
-						<h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
-						<p className="mt-1 text-sm text-gray-500">
-							Browse all past Problem of the Week challenges
-						</p>
-					</header>
+  // Reload data when switching to archive section
+  useEffect(() => {
+    if (activeSection === "archive") {
+      loadPuzzleData();
+    }
+  }, [activeSection]);
 
-					{allPuzzles.filter(p => p.status === 'archived').length === 0 ? (
-						<div className="text-center py-8 text-gray-500">
-							No archived puzzles found yet.
-						</div>
-					) : (
-						<div className="space-y-6">
-							{allPuzzles.filter(p => p.status === 'archived').map((p) => (
-								<Card key={p.id} className="overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-									<button
-										onClick={() => setExpandedPuzzleId(expandedPuzzleId === p.id ? null : p.id)}
-										className="w-full text-left hover:bg-gray-50 transition-colors"
-									>
-										<CardHeader className="pb-4 px-6 py-5">
-											<div className="flex items-center justify-between">
-												<div className="flex-1">
-													<div className="flex items-center gap-3 mb-3">
-														<CardTitle className="text-xl font-semibold text-gray-900">{p.title}</CardTitle>
-													</div>
-													<div className="flex items-center gap-6 text-sm text-gray-600">
-														<span className="flex items-center gap-1">
-															📅 {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-														</span>
-														<span className="flex items-center gap-1">
-															⭐ {getStars(p.difficulty)}
-														</span>
-														{currentUser && userSubmissions[p.id!] && (
-															<span className="flex items-center gap-1">
-																{userSubmissions[p.id!].grade ? (
-																	<>
-																		<span className="text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-full text-xs">
-																			🎯 Grade: {userSubmissions[p.id!].grade}/5
-																		</span>
-																	</>
-																) : (
-																	<span className="text-orange-600 bg-orange-50 px-2 py-1 rounded-full text-xs">
-																		⏳ Submitted (pending review)
-																	</span>
-																)}
-															</span>
-														)}
-													</div>
-												</div>
-												<div className="flex items-center gap-2">
-													<span className="text-xs text-gray-500">
-														{expandedPuzzleId === p.id ? 'Hide details' : 'View details'}
-													</span>
-													{expandedPuzzleId === p.id ? (
-														<ChevronUp className="h-5 w-5 text-gray-500" />
-													) : (
-														<ChevronDown className="h-5 w-5 text-gray-500" />
-													)}
-												</div>
-											</div>
-										</CardHeader>
-									</button>
-									
-									{expandedPuzzleId === p.id && (
-										<CardContent className="pt-0 border-t bg-gray-50/50">
-											<div className="px-6 py-6 space-y-6">
-												{p.image && (
-													<div className="bg-white rounded-lg p-4 border border-gray-200">
-														<img
-															src={p.image.startsWith('http') ? p.image : withBase(p.image)}
-															alt={p.title}
-															className="w-full rounded-lg border object-contain max-h-96"
-														/>
-													</div>
-												)}
-												<div className="bg-white rounded-lg p-5 border border-gray-200">
-													<h4 className="font-semibold text-gray-900 mb-3 text-lg">Problem Statement</h4>
-													<p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{p.prompt}</p>
-												</div>
-												{p.solution && (
-													<div className="bg-white rounded-lg p-5 border border-gray-200">
-														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Solution</h4>
-														<p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{p.solution}</p>
-													</div>
-												)}
-												{p.correctAnswer && (
-													<div className="bg-white rounded-lg p-5 border border-gray-200">
-														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Correct Answer</h4>
-														<p className="text-gray-700 font-mono bg-gray-100 px-3 py-2 rounded border">{p.correctAnswer}</p>
-													</div>
-												)}
-												{currentUser && userSubmissions[p.id!] && (
-													<div className="bg-white rounded-lg p-5 border border-gray-200">
-														<h4 className="font-semibold text-gray-900 mb-3 text-lg">Your Submission</h4>
-														{userSubmissions[p.id!].grade ? (
-															<div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-																<p className="text-blue-800 font-semibold mb-2 text-lg">
-																	🎯 Your Grade: {userSubmissions[p.id!].grade}/5
-																</p>
-																<p className="text-sm text-blue-600 mb-3">
-																	{getGradeMessage(userSubmissions[p.id!].grade)}
-																</p>
-																<div className="bg-white p-3 rounded border">
-																	<p className="text-sm text-gray-600">
-																		<strong>Your Answer:</strong>
-																	</p>
-																	<p className="text-gray-700 mt-1 whitespace-pre-wrap">{userSubmissions[p.id!].answer}</p>
-																</div>
-															</div>
-														) : (
-															<div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-																<p className="text-orange-800 font-semibold mb-2 text-lg">
-																	⏳ Submitted (pending review)
-																</p>
-																<div className="bg-white p-3 rounded border">
-																	<p className="text-sm text-gray-600">
-																		<strong>Your Answer:</strong>
-																	</p>
-																	<p className="text-gray-700 mt-1 whitespace-pre-wrap">{userSubmissions[p.id!].answer}</p>
-																</div>
-															</div>
-														)}
-													</div>
-												)}
-											</div>
-										</CardContent>
-									)}
-								</Card>
-							))}
-						</div>
-					)}
-				</div>
-			);
-		}
+  const potwID = puzzles?.[0]?.id;
 
-		if (activeSection === "information") {
-			return (
-				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle>About Problem of the Week</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4 text-gray-700">
-							<p>
-								The Problem of the Week (POTW) is a weekly mathematical challenge designed to test your problem-solving skills and mathematical reasoning. Each week, we present a new puzzle that ranges in difficulty from beginner to advanced levels.
-							</p>
-							<p>
-								By participating consistently, you can earn coins and build your streak. These achievements not only showcase your dedication but can also be redeemed for exciting prizes and recognition within our community.
-							</p>
-							<p>
-								Whether you're a seasoned mathematician or just starting your journey, POTW offers a fun and engaging way to sharpen your skills, think creatively, and connect with fellow problem solvers. Submit your solutions, track your progress, and climb the leaderboard!
-							</p>
-							<p className="font-semibold">
-								Challenge yourself weekly and watch your mathematical prowess grow!
-							</p>
-						</CardContent>
-					</Card>
-				</div>
-			);
-		}
-		
-		// Handle sections that require an active puzzle
-		if (!puzzle) {
-			if (activeSection === "homebase") {
-				return (
-					<div className="p-6 text-center">
-						<h2 className="text-xl font-semibold text-gray-700 mb-2">No Active Puzzle</h2>
-						<p className="text-gray-500 mb-4">There's no Problem of the Week available right now.</p>
-						<p className="text-sm text-gray-400">
-							Check the <button 
-								onClick={() => setActiveSection("archive")}
-								className="text-blue-600 hover:text-blue-800 underline"
-							>
-								POTW Archive
-							</button> to see past puzzles.
-						</p>
-					</div>
-				);
-			} else if (activeSection === "leaderboard") {
-				return (
-					<div className="p-6 text-center">
-						<h2 className="text-xl font-semibold text-gray-700 mb-2">No Active Puzzle</h2>
-						<p className="text-gray-500 mb-4">There's no active Problem of the Week to show leaderboard for.</p>
-						<p className="text-sm text-gray-400">
-							Check the <button 
-								onClick={() => setActiveSection("archive")}
-								className="text-blue-600 hover:text-blue-800 underline"
-							>
-								POTW Archive
-							</button> to see past puzzles and their leaderboards.
-						</p>
-					</div>
-				);
-			}
-			return <div className="p-6">No puzzle yet. Check back soon!</div>;
-		}
+  const puzzle = useMemo(() => {
+    if (!puzzles) return null;
+    if (id) return puzzles.find((p) => p.id === id) ?? null;
+    return puzzles[0] ?? null;
+  }, [puzzles, id]);
 
-		switch (activeSection) {
-			case "homebase":
-				return (
-					<div className="space-y-6">
-						<header className="mb-6">
-							<div className="flex items-start justify-between">
-								<div className="flex-1">
-									<h1 className="text-3xl font-bold text-gray-900">{puzzle.title}</h1>
-									<p className="mt-1 text-sm text-gray-500">
-										Problem of the Week • {puzzle.createdAt ? new Date(puzzle.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-										{puzzle.difficulty ? ` • ${getStars(puzzle.difficulty)}` : ""}
-									</p>
-								</div>
-								
-								{/* Countdown Timer - Only show if expiry is set */}
-								{puzzle.expiresAt && (
-									<div className="ml-4">
-										<CountdownTimer 
-											expiresAt={new Date(puzzle.expiresAt.seconds * 1000)}
-											onExpired={() => {
-												// Optionally refresh the page or show expired message
-												console.log('Puzzle has expired!');
-											}}
-										/>
-									</div>
-								)}
-							</div>
-						</header>
+  const renderContent = () => {
+    if (loading) return <div className="p-6">Loading…</div>;
+    if (error) return <div className="p-6 text-red-600">{error}</div>;
 
-						{puzzle.image && (
-							<img
-								src={withBase(puzzle.image!)}
-								alt={puzzle.title}
-								className="mb-6 w-full rounded-lg border object-contain"
-							/>
-						)}
+    // Handle sections that don't need an active puzzle
+    if (activeSection === "archive") {
+      return (
+        <div className="space-y-4">
+          <header className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Browse all past Problem of the Week challenges
+            </p>
+          </header>
 
-						<p className="mb-8 whitespace-pre-wrap text-gray-800">
-							{puzzle.prompt}
-						</p>
+          {allPuzzles.filter((p) => p.status === "archived").length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No archived puzzles found yet.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {allPuzzles
+                .filter((p) => p.status === "archived")
+                .map((p) => (
+                  <Card
+                    key={p.id}
+                    className="overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <button
+                      onClick={() =>
+                        setExpandedPuzzleId(
+                          expandedPuzzleId === p.id ? null : p.id
+                        )
+                      }
+                      className="w-full text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <CardHeader className="pb-4 px-6 py-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <CardTitle className="text-xl font-semibold text-gray-900">
+                                {p.title}
+                              </CardTitle>
+                            </div>
+                            <div className="flex items-center gap-6 text-sm text-gray-600">
+                              <span className="flex items-center gap-1">
+                                📅{" "}
+                                {p.createdAt
+                                  ? new Date(
+                                      p.createdAt.seconds * 1000
+                                    ).toLocaleDateString()
+                                  : "N/A"}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                ⭐ {getStars(p.difficulty)}
+                              </span>
+                              {currentUser && userSubmissions[p.id!] && (
+                                <span className="flex items-center gap-1">
+                                  {userSubmissions[p.id!].grade ? (
+                                    <>
+                                      <span className="text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-full text-xs">
+                                        🎯 Grade: {userSubmissions[p.id!].grade}
+                                        /5
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded-full text-xs">
+                                      ⏳ Submitted (pending review)
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">
+                              {expandedPuzzleId === p.id
+                                ? "Hide details"
+                                : "View details"}
+                            </span>
+                            {expandedPuzzleId === p.id ? (
+                              <ChevronUp className="h-5 w-5 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-500" />
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </button>
 
-						<SubmissionForm puzzleId={puzzle.id} puzzleName={puzzle.title} puzzle={puzzle} />
-					</div>
-				);
+                    {expandedPuzzleId === p.id && (
+                      <CardContent className="pt-0 border-t bg-gray-50/50">
+                        <div className="px-6 py-6 space-y-6">
+                          {p.image && (
+                            <div className="bg-white rounded-lg p-4 border border-gray-200">
+                              <img
+                                src={
+                                  p.image.startsWith("http")
+                                    ? p.image
+                                    : withBase(p.image)
+                                }
+                                alt={p.title}
+                                className="w-full rounded-lg border object-contain max-h-96"
+                              />
+                            </div>
+                          )}
+                          <div className="bg-white rounded-lg p-5 border border-gray-200">
+                            <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                              Problem Statement
+                            </h4>
+                            <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                              {p.prompt}
+                            </p>
+                          </div>
+                          {p.solution && (
+                            <div className="bg-white rounded-lg p-5 border border-gray-200">
+                              <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                                Solution
+                              </h4>
+                              <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                                {p.solution}
+                              </p>
+                            </div>
+                          )}
+                          {p.correctAnswer && (
+                            <div className="bg-white rounded-lg p-5 border border-gray-200">
+                              <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                                Correct Answer
+                              </h4>
+                              <p className="text-gray-700 font-mono bg-gray-100 px-3 py-2 rounded border">
+                                {p.correctAnswer}
+                              </p>
+                            </div>
+                          )}
+                          {currentUser && userSubmissions[p.id!] && (
+                            <div className="bg-white rounded-lg p-5 border border-gray-200">
+                              <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                                Your Submission
+                              </h4>
+                              {userSubmissions[p.id!].grade ? (
+                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                  <p className="text-blue-800 font-semibold mb-2 text-lg">
+                                    🎯 Your Grade:{" "}
+                                    {userSubmissions[p.id!].grade}/5
+                                  </p>
+                                  <p className="text-sm text-blue-600 mb-3">
+                                    {getGradeMessage(
+                                      userSubmissions[p.id!].grade
+                                    )}
+                                  </p>
+                                  <div className="bg-white p-3 rounded border">
+                                    <p className="text-sm text-gray-600">
+                                      <strong>Your Answer:</strong>
+                                    </p>
+                                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">
+                                      {userSubmissions[p.id!].answer}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                  <p className="text-orange-800 font-semibold mb-2 text-lg">
+                                    ⏳ Submitted (pending review)
+                                  </p>
+                                  <div className="bg-white p-3 rounded border">
+                                    <p className="text-sm text-gray-600">
+                                      <strong>Your Answer:</strong>
+                                    </p>
+                                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">
+                                      {userSubmissions[p.id!].answer}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+            </div>
+          )}
+        </div>
+      );
+    }
 
-			case "leaderboard":
-				return (
-					<div className="space-y-6">
-						<header className="mb-6">
-							<h1 className="text-3xl font-bold text-gray-900">
-								Live Leaderboard
-							</h1>
-							<p className="mt-1 text-sm text-gray-500">
-								Real-time submissions for "{puzzle.title}"
-							</p>
-						</header>
+    if (activeSection === "information") {
+      return (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>About Problem of the Week</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-gray-700">
+              <p>
+                The Problem of the Week (POTW) is a weekly mathematical
+                challenge designed to test your problem-solving skills and
+                mathematical reasoning. Each week, we present a new puzzle that
+                ranges in difficulty from beginner to advanced levels.
+              </p>
+              <p>
+                By participating consistently, you can earn coins and build your
+                streak. These achievements not only showcase your dedication but
+                can also be redeemed for exciting prizes and recognition within
+                our community.
+              </p>
+              <p>
+                Whether you're a seasoned mathematician or just starting your
+                journey, POTW offers a fun and engaging way to sharpen your
+                skills, think creatively, and connect with fellow problem
+                solvers. Submit your solutions, track your progress, and climb
+                the leaderboard!
+              </p>
+              <p className="font-semibold">
+                Challenge yourself weekly and watch your mathematical prowess
+                grow!
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
-						<Leaderboard puzzleId={puzzle.id} />
-					</div>
-				);
+    // Handle sections that require an active puzzle
+    if (!puzzle) {
+      if (activeSection === "homebase") {
+        return (
+          <div className="p-6 text-center">
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              No Active Puzzle
+            </h2>
+            <p className="text-gray-500 mb-4">
+              There's no Problem of the Week available right now.
+            </p>
+            <p className="text-sm text-gray-400">
+              Check the{" "}
+              <button
+                onClick={() => setActiveSection("archive")}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                POTW Archive
+              </button>{" "}
+              to see past puzzles.
+            </p>
+          </div>
+        );
+      } else if (activeSection === "leaderboard") {
+        return (
+          <div className="p-6 text-center">
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              No Active Puzzle
+            </h2>
+            <p className="text-gray-500 mb-4">
+              There's no active Problem of the Week to show leaderboard for.
+            </p>
+            <p className="text-sm text-gray-400">
+              Check the{" "}
+              <button
+                onClick={() => setActiveSection("archive")}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                POTW Archive
+              </button>{" "}
+              to see past puzzles and their leaderboards.
+            </p>
+          </div>
+        );
+      }
+      return <div className="p-6">No puzzle yet. Check back soon!</div>;
+    }
 
-			default:
-				return null;
-		}
-	};
+    switch (activeSection) {
+      case "homebase":
+        return (
+          <div className="space-y-6">
+            <header className="mb-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    {puzzle.title}
+                  </h1>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Problem of the Week •{" "}
+                    {puzzle.createdAt
+                      ? new Date(
+                          puzzle.createdAt.seconds * 1000
+                        ).toLocaleDateString()
+                      : "N/A"}
+                    {puzzle.difficulty
+                      ? ` • ${getStars(puzzle.difficulty)}`
+                      : ""}
+                  </p>
+                </div>
 
-	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-			<Header />
-			<PageHeader
-				title="Problem Of The Week"
-				subtitle="Challenge the current problem, and receive recognition! Take part in these problems consistently to redeem prizes."
-				backgroundImage="https://img.lovepik.com/bg/20240224/3D-Rendered-Technological-Dark-Toned-Tech-Waves-with-Polygons-and_3695383_wh1200.jpg"
-			/>
+                {/* Countdown Timer - Only show if expiry is set */}
+                {puzzle.expiresAt && (
+                  <div className="ml-4">
+                    <CountdownTimer
+                      expiresAt={new Date(puzzle.expiresAt.seconds * 1000)}
+                      onExpired={() => {
+                        // Optionally refresh the page or show expired message
+                        console.log("Puzzle has expired!");
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </header>
 
-			<div className="py-8">
-				<div className="container mx-auto px-4">
-					<div className="flex flex-col gap-8 lg:flex-row">
-						{/* Sidebar */}
-						<div className="lg:w-1/4">
-							<div className="sticky top-8 rounded-lg bg-white p-6 shadow-md">
-								<h3 className="mb-4 text-lg font-semibold text-gray-800">
-									POTW Sections
-								</h3>
-								<div className="space-y-2">
-									<Button
-										variant={activeSection === "homebase" ? "default" : "ghost"}
-										className="w-full justify-start"
-										onClick={() => setActiveSection("homebase")}
-									>
-										POTW Homebase
-									</Button>
-									<Button
-										variant={activeSection === "leaderboard" ? "default" : "ghost"}
-										className="w-full justify-start"
-										onClick={() => setActiveSection("leaderboard")}
-									>
-										Leaderboard
-									</Button>
-									<Button
-										variant={activeSection === "information" ? "default" : "ghost"}
-										className="w-full justify-start"
-										onClick={() => setActiveSection("information")}
-									>
-										Information
-									</Button>
-									<Button
-										variant={activeSection === "archive" ? "default" : "ghost"}
-										className="w-full justify-start"
-										onClick={() => setActiveSection("archive")}
-									>
-										POTW Archive
-									</Button>
-								</div>
-							</div>
-						</div>
+            {puzzle.image && (
+              <img
+                src={withBase(puzzle.image!)}
+                alt={puzzle.title}
+                className="mb-6 w-full rounded-lg border object-contain"
+              />
+            )}
 
-						{/* Main Content */}
-						<div className="lg:w-3/4">
-							<div className="rounded-lg bg-white p-8 shadow-md">
-								{renderContent()}
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+            <p className="mb-8 whitespace-pre-wrap text-gray-800">
+              {puzzle.prompt}
+            </p>
 
-			<Footer />
-		</div>
-	);
+            <SubmissionForm
+              puzzleId={puzzle.id}
+              puzzleName={puzzle.title}
+              puzzle={puzzle}
+            />
+          </div>
+        );
+
+      case "leaderboard":
+        return (
+          <div className="space-y-6">
+            <header className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">
+                Live Leaderboard
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Real-time submissions for "{puzzle.title}"
+              </p>
+            </header>
+
+            <Leaderboard puzzleId={puzzle.id} />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      <Header />
+      <PageHeader
+        title="Problem Of The Week"
+        subtitle="Challenge the current problem, and receive recognition! Take part in these problems consistently to redeem prizes."
+        backgroundImage="https://img.lovepik.com/bg/20240224/3D-Rendered-Technological-Dark-Toned-Tech-Waves-with-Polygons-and_3695383_wh1200.jpg"
+      />
+
+      <div className="py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col gap-8 lg:flex-row">
+            {/* Sidebar */}
+            <div className="lg:w-1/4">
+              <div className="sticky top-8 rounded-lg bg-white p-6 shadow-md">
+                <h3 className="mb-4 text-lg font-semibold text-gray-800">
+                  POTW Sections
+                </h3>
+                <div className="space-y-2">
+                  <Button
+                    variant={activeSection === "homebase" ? "default" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setActiveSection("homebase")}
+                  >
+                    POTW Homebase
+                  </Button>
+                  <Button
+                    variant={
+                      activeSection === "leaderboard" ? "default" : "ghost"
+                    }
+                    className="w-full justify-start"
+                    onClick={() => setActiveSection("leaderboard")}
+                  >
+                    Leaderboard
+                  </Button>
+                  <Button
+                    variant={
+                      activeSection === "information" ? "default" : "ghost"
+                    }
+                    className="w-full justify-start"
+                    onClick={() => setActiveSection("information")}
+                  >
+                    Information
+                  </Button>
+                  <Button
+                    variant={activeSection === "archive" ? "default" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setActiveSection("archive")}
+                  >
+                    POTW Archive
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="lg:w-3/4">
+              <div className="rounded-lg bg-white p-8 shadow-md">
+                {renderContent()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
 }
 
-function SubmissionForm({ puzzleId, puzzleName, puzzle }: { puzzleId: string; puzzleName: string; puzzle: FirestorePuzzle }) {
-	const { currentUser } = useAuth();
-	const [answer, setAnswer] = useState("");
-	const [submitted, setSubmitted] = useState(false);
-	const [submissionData, setSubmissionData] = useState<any>(null);
-	const [status, setStatus] = useState<
+function SubmissionForm({
+  puzzleId,
+  puzzleName,
+  puzzle,
+}: {
+  puzzleId: string;
+  puzzleName: string;
+  puzzle: FirestorePuzzle;
+}) {
+  const { currentUser } = useAuth();
+  const [answer, setAnswer] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submissionData, setSubmissionData] = useState<any>(null);
+  const [status, setStatus] = useState<
     "idle" | "submitting" | "success" | "error"
-	>("idle");
-	const [error, setError] = useState<string | null>(null);
-	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  >("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-	useEffect(() => {
-		// Check if user already submitted this puzzle
-		const checkSubmission = async () => {
-			if (currentUser) {
-				try {
-					const existingSubmission = await potwService.getUserSubmission(puzzleId, currentUser.uid);
-					setSubmitted(!!existingSubmission);
-					setSubmissionData(existingSubmission);
-				} catch (error) {
-					console.error('Error checking submission:', error);
-				}
-			}
-		};
-		checkSubmission();
-	}, [puzzleId, currentUser]);
+  useEffect(() => {
+    // Check if user already submitted this puzzle
+    const checkSubmission = async () => {
+      if (currentUser) {
+        try {
+          const existingSubmission = await potwService.getUserSubmission(
+            puzzleId,
+            currentUser.uid
+          );
+          setSubmitted(!!existingSubmission);
+          setSubmissionData(existingSubmission);
+        } catch (error) {
+          console.error("Error checking submission:", error);
+        }
+      }
+    };
+    checkSubmission();
+  }, [puzzleId, currentUser]);
 
-	// Real-time listener for submission updates (including grades)
-	useEffect(() => {
-		if (!currentUser || !puzzleId) return;
+  // Real-time listener for submission updates (including grades)
+  useEffect(() => {
+    if (!currentUser || !puzzleId) return;
 
-		const unsubscribe = potwService.subscribeToUserSubmissions(
-			currentUser.uid,
-			(submissions) => {
-				// Find submission for this specific puzzle
-				const puzzleSubmission = submissions.find(sub => sub.puzzleId === puzzleId);
-				if (puzzleSubmission) {
-					setSubmitted(true);
-					setSubmissionData(puzzleSubmission);
-				} else {
-					setSubmitted(false);
-					setSubmissionData(null);
-				}
-			}
-		);
+    const unsubscribe = potwService.subscribeToUserSubmissions(
+      currentUser.uid,
+      (submissions) => {
+        // Find submission for this specific puzzle
+        const puzzleSubmission = submissions.find(
+          (sub) => sub.puzzleId === puzzleId
+        );
+        if (puzzleSubmission) {
+          setSubmitted(true);
+          setSubmissionData(puzzleSubmission);
+        } else {
+          setSubmitted(false);
+          setSubmissionData(null);
+        }
+      }
+    );
 
-		return () => unsubscribe();
-	}, [currentUser, puzzleId]);
+    return () => unsubscribe();
+  }, [currentUser, puzzleId]);
 
-	const handleSubmitClick = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (submitted || !currentUser) return;
+  const handleSubmitClick = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitted || !currentUser) return;
 
-		// Check if puzzle has expired (only if expiry is set)
-		if (puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000)) {
-			setError("This puzzle has expired! Submissions are no longer accepted.");
-			return;
-		}
+    // Check if puzzle has expired (only if expiry is set)
+    if (
+      puzzle.expiresAt &&
+      new Date() > new Date(puzzle.expiresAt.seconds * 1000)
+    ) {
+      setError("This puzzle has expired! Submissions are no longer accepted.");
+      return;
+    }
 
-		if (!answer.trim()) {
-			setError("Please provide your answer!");
-			return;
-		}
+    if (!answer.trim()) {
+      setError("Please provide your answer!");
+      return;
+    }
 
-		// Show confirmation dialog
-		setShowConfirmDialog(true);
-	};
+    // Show confirmation dialog
+    setShowConfirmDialog(true);
+  };
 
-	const confirmSubmit = async () => {
-		if (!currentUser) return;
+  const confirmSubmit = async () => {
+    if (!currentUser) return;
 
-		try {
-			setStatus("submitting");
-			setError(null);
-			setShowConfirmDialog(false);
+    try {
+      setStatus("submitting");
+      setError(null);
+      setShowConfirmDialog(false);
 
-			await submit({ 
-				puzzleId, 
-				puzzleName,
-				name: currentUser.displayName || "Anonymous", 
-				email: currentUser.email || "", 
-				answer 
-			}, currentUser.uid);
+      await submit(
+        {
+          puzzleId,
+          puzzleName,
+          name: currentUser.displayName || "Anonymous",
+          email: currentUser.email || "",
+          answer,
+        },
+        currentUser.uid
+      );
 
-			setSubmitted(true);
-			setStatus("success");
-		} catch (e: unknown) {
-			setStatus("error");
-			setError(getErrorMessage(e));
-		}
-	};
+      setSubmitted(true);
+      setStatus("success");
+    } catch (e: unknown) {
+      setStatus("error");
+      setError(getErrorMessage(e));
+    }
+  };
 
-	const cancelSubmit = () => {
-		setShowConfirmDialog(false);
-	};
+  const cancelSubmit = () => {
+    setShowConfirmDialog(false);
+  };
 
-	return (
-		<div className="rounded-xl border p-4">
-			<h3 className="mb-4 text-lg font-semibold">Submit Your Answer</h3>
+  return (
+    <div className="rounded-xl border p-4">
+      <h3 className="mb-4 text-lg font-semibold">Submit Your Answer</h3>
 
-			{!currentUser ? (
-				<div className="text-center py-8">
-					<p className="text-gray-600 mb-4">Please log in to submit your answer.</p>
-					<Link 
-						to="/login" 
-						className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700"
-					>
-						Login to Submit
-					</Link>
-				</div>
-			) : submitted ? (
-				<div className="text-center py-4">
-					<p className="text-green-600 font-medium">
-						✅ You have already submitted your answer for this puzzle!
-					</p>
-					{submissionData?.grade ? (
-						<div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-							<p className="text-blue-800 font-semibold">
-								🎯 Your Grade: {submissionData.grade}/5
-							</p>
-							<p className="text-sm text-blue-600 mt-1">
-								{getGradeMessage(submissionData.grade)}
-							</p>
-						</div>
-					) : (
-						<p className="text-sm text-gray-600 mt-2">
-							Thank you for participating! Your submission is being reviewed.
-						</p>
-					)}
-				</div>
-			) : puzzle.expiresAt && new Date() > new Date(puzzle.expiresAt.seconds * 1000) ? (
-				<div className="text-center py-4">
-					<p className="text-red-600 font-medium">
-						⏰ This puzzle has expired!
-					</p>
-					<p className="text-sm text-gray-600 mt-2">
-						Submissions are no longer accepted for this puzzle.
-					</p>
-				</div>
-			) : (
-				<div>
-					<form onSubmit={handleSubmitClick} className="space-y-3">
-						<div>
-							<textarea
-								placeholder="Your solution / reasoning"
-								value={answer}
-								onChange={(e) => setAnswer(e.target.value)}
-								className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
-								required
-								maxLength={3000}
-							/>
-							<div className="flex justify-between items-center mt-1">
-								<div className="text-xs text-gray-500">
-									{answer.length > 2500 && (
-										<span className="text-orange-600 font-medium">
-											⚠️ Approaching character limit
-										</span>
-									)}
-									{answer.length >= 3000 && (
-										<span className="text-red-600 font-medium">
-											🚫 Character limit reached
-										</span>
-									)}
-								</div>
-								<div className="text-xs text-gray-500">
-									{answer.length}/3000 characters
-								</div>
-							</div>
-						</div>
+      {!currentUser ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">
+            Please log in to submit your answer.
+          </p>
+          <Link
+            to="/login"
+            className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700"
+          >
+            Login to Submit
+          </Link>
+        </div>
+      ) : submitted ? (
+        <div className="text-center py-4">
+          <p className="text-green-600 font-medium">
+            ✅ You have already submitted your answer for this puzzle!
+          </p>
+          {submissionData?.grade ? (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-blue-800 font-semibold">
+                🎯 Your Grade: {submissionData.grade}/5
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                {getGradeMessage(submissionData.grade)}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 mt-2">
+              Thank you for participating! Your submission is being reviewed.
+            </p>
+          )}
+        </div>
+      ) : puzzle.expiresAt &&
+        new Date() > new Date(puzzle.expiresAt.seconds * 1000) ? (
+        <div className="text-center py-4">
+          <p className="text-red-600 font-medium">
+            ⏰ This puzzle has expired!
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            Submissions are no longer accepted for this puzzle.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <form onSubmit={handleSubmitClick} className="space-y-3">
+            <div>
+              <textarea
+                placeholder="Your solution / reasoning"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                className="min-h-32 w-full rounded-md border px-3 py-2 outline-none focus:ring-2 focus:ring-teal-400"
+                required
+                maxLength={1500}
+              />
+              <div className="flex justify-between items-center mt-1">
+                <div className="text-xs text-gray-500">
+                  {answer.length > 1250 && (
+                    <span className="text-orange-600 font-medium">
+                      ⚠️ Approaching character limit
+                    </span>
+                  )}
+                  {answer.length >= 1501 && (
+                    <span className="text-red-600 font-medium">
+                      🚫 Character limit reached
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {answer.length}/1500 characters
+                </div>
+              </div>
+            </div>
 
-						<div className="flex items-center gap-3">
-							<button
-								type="submit"
-								disabled={status === "submitting" || answer.length === 0 || answer.length > 3000}
-								className="rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
-							>
-								{status === "submitting" ? "Submitting…" : "Submit Answer"}
-							</button>
-							{error && <span className="text-sm text-red-600">{error}</span>}
-							{status === "success" && (
-								<span className="text-sm text-green-600">✅ Submitted successfully!</span>
-							)}
-						</div>
-					</form>
-				</div>
-			)}
-			<div className="mt-2 text-xs text-gray-500 space-y-1">
-				<p><strong>IMPORTANT:</strong> You can only submit an answer once!</p>
-				<p>💡 <strong>Character limit:</strong> 3000 characters (enough for detailed math solutions with equations and explanations)</p>
-			</div>
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={
+                  status === "submitting" ||
+                  answer.length === 0 ||
+                  answer.length > 1500
+                }
+                className="rounded-md bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+              >
+                {status === "submitting" ? "Submitting…" : "Submit Answer"}
+              </button>
+              {error && <span className="text-sm text-red-600">{error}</span>}
+              {status === "success" && (
+                <span className="text-sm text-green-600">
+                  ✅ Submitted successfully!
+                </span>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
+      <div className="mt-2 text-xs text-gray-500 space-y-1">
+        <p>
+          <strong>IMPORTANT:</strong> You can only submit an answer once!
+        </p>
+        <p>
+          💡 <strong>Character limit:</strong> 1500 characters (brevity is the
+          soul of wit!)
+        </p>
+      </div>
 
-			{/* Submit Confirmation Dialog */}
-			<AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Confirm Submission</AlertDialogTitle>
-						<AlertDialogDescription>
-							Are you sure you want to submit your answer for this puzzle?
-							<br /><br />
-							<strong>Important:</strong> You can only submit once per puzzle. Make sure your answer is complete and correct before proceeding.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel onClick={cancelSubmit}>Cancel</AlertDialogCancel>
-						<AlertDialogAction 
-							onClick={confirmSubmit}
-							className="bg-teal-600 hover:bg-teal-700"
-						>
-							Submit Answer
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</div>
-	);
+      {/* Submit Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to submit your answer for this puzzle?
+              <br />
+              <br />
+              <strong>Important:</strong> You can only submit once per puzzle.
+              Make sure your answer is complete and correct before proceeding.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelSubmit}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmSubmit}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              Submit Answer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
 
-async function submit(payload: {
-	puzzleId: string;
-	puzzleName: string;
-	name: string;
-	email: string;
-	answer: string;
-}, userId: string): Promise<{ ok: boolean; duplicate?: boolean }> {
-	try {
-		// Check if user already submitted
-		const existingSubmission = await potwService.getUserSubmission(payload.puzzleId, userId);
-		if (existingSubmission) {
-			return { ok: true, duplicate: true };
-		}
+async function submit(
+  payload: {
+    puzzleId: string;
+    puzzleName: string;
+    name: string;
+    email: string;
+    answer: string;
+  },
+  userId: string
+): Promise<{ ok: boolean; duplicate?: boolean }> {
+  try {
+    // Check if user already submitted
+    const existingSubmission = await potwService.getUserSubmission(
+      payload.puzzleId,
+      userId
+    );
+    if (existingSubmission) {
+      return { ok: true, duplicate: true };
+    }
 
-		// Submit to Firestore
-		await potwService.submitAnswer({
-			puzzleId: payload.puzzleId,
-			puzzleName: payload.puzzleName,
-			userId: userId,
-			userName: payload.name,
-			userEmail: payload.email,
-			answer: payload.answer,
-		});
+    // Submit to Firestore
+    await potwService.submitAnswer({
+      puzzleId: payload.puzzleId,
+      puzzleName: payload.puzzleName,
+      userId: userId,
+      userName: payload.name,
+      userEmail: payload.email,
+      answer: payload.answer,
+    });
 
-		return { ok: true };
-	} catch (error) {
-		console.error('Submission error:', error);
-		throw new Error('Submission failed');
-	}
+    return { ok: true };
+  } catch (error) {
+    console.error("Submission error:", error);
+    throw new Error("Submission failed");
+  }
 }
