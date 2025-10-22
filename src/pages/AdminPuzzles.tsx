@@ -1,22 +1,45 @@
-import React, { useEffect, useState } from 'react';
-import { useAdmin } from '@/hooks/useAdmin';
-import { puzzleService, potwService, Puzzle } from '@/lib/firestore';
-import { Timestamp } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { Plus, Edit, Trash2, Eye, FileText, X } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useAdmin } from "@/hooks/useAdmin";
+import { puzzleService, potwService, Puzzle } from "@/lib/firestore";
+import { Timestamp } from "firebase/firestore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Plus, Edit, Trash2, Eye, FileText, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const AdminPuzzles: React.FC = () => {
   const { currentUser } = useAuth();
@@ -28,7 +51,9 @@ const AdminPuzzles: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPuzzle, setEditingPuzzle] = useState<Puzzle | null>(null);
-  const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
+  const [submissionCounts, setSubmissionCounts] = useState<
+    Record<string, number>
+  >({});
   const [gradedCounts, setGradedCounts] = useState<Record<string, number>>({});
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -47,7 +72,7 @@ const AdminPuzzles: React.FC = () => {
     puzzle: null,
     newStatus: false,
   });
-  
+
   type PuzzleFormData = {
     title: string;
     prompt: string;
@@ -60,15 +85,16 @@ const AdminPuzzles: React.FC = () => {
 
   // Form state
   const [formData, setFormData] = useState<PuzzleFormData>({
-    title: '',
-    prompt: '',
+    title: "",
+    prompt: "",
     difficulty: 3,
-    correctAnswer: '',
-    solution: '',
-    image: '',
-    expiresAt: '',
+    correctAnswer: "",
+    solution: "",
+    image: "",
+    expiresAt: "",
   });
-  const [originalFormData, setOriginalFormData] = useState<PuzzleFormData | null>(null);
+  const [originalFormData, setOriginalFormData] =
+    useState<PuzzleFormData | null>(null);
   const [hasFormChanges, setHasFormChanges] = useState(false);
 
   // Check if form has changes
@@ -77,10 +103,10 @@ const AdminPuzzles: React.FC = () => {
       setHasFormChanges(false);
       return false;
     }
-    
+
     // Normalize empty strings and null values for comparison
-    const normalizeValue = (value: string) => value === '' ? null : value;
-    
+    const normalizeValue = (value: string) => (value === "" ? null : value);
+
     // Compare each field individually
     const changes = {
       title: formData.title !== originalFormData.title,
@@ -89,10 +115,12 @@ const AdminPuzzles: React.FC = () => {
       correctAnswer: formData.correctAnswer !== originalFormData.correctAnswer,
       solution: formData.solution !== originalFormData.solution,
       image: formData.image !== originalFormData.image,
-      expiresAt: normalizeValue(formData.expiresAt) !== normalizeValue(originalFormData.expiresAt),
+      expiresAt:
+        normalizeValue(formData.expiresAt) !==
+        normalizeValue(originalFormData.expiresAt),
     };
-    
-    const hasAnyChanges = Object.values(changes).some(change => change);
+
+    const hasAnyChanges = Object.values(changes).some((change) => change);
     setHasFormChanges(hasAnyChanges);
     return hasAnyChanges;
   };
@@ -109,10 +137,10 @@ const AdminPuzzles: React.FC = () => {
   // Real-time subscription to all puzzles
   useEffect(() => {
     const unsubscribe = puzzleService.subscribeToAllPuzzles((puzzles) => {
-      const activeList = puzzles.filter(p => p.status === 'active');
-      const backlogList = puzzles.filter(p => p.status === 'backlog');
-      const archivedList = puzzles.filter(p => p.status === 'archived');
-      
+      const activeList = puzzles.filter((p) => p.status === "active");
+      const backlogList = puzzles.filter((p) => p.status === "backlog");
+      const archivedList = puzzles.filter((p) => p.status === "archived");
+
       setActivePuzzles(activeList);
       setBacklogPuzzles(backlogList);
       setArchivedPuzzles(archivedList);
@@ -126,7 +154,7 @@ const AdminPuzzles: React.FC = () => {
     const unsubscribe = potwService.subscribeToAllSubmissions((submissions) => {
       // Group submissions by puzzle ID
       const puzzleSubmissions: Record<string, any[]> = {};
-      submissions.forEach(submission => {
+      submissions.forEach((submission) => {
         if (!puzzleSubmissions[submission.puzzleId]) {
           puzzleSubmissions[submission.puzzleId] = [];
         }
@@ -136,11 +164,11 @@ const AdminPuzzles: React.FC = () => {
       // Calculate counts for each puzzle
       const counts: Record<string, number> = {};
       const gradedCounts: Record<string, number> = {};
-      
-      Object.keys(puzzleSubmissions).forEach(puzzleId => {
+
+      Object.keys(puzzleSubmissions).forEach((puzzleId) => {
         const puzzleSubs = puzzleSubmissions[puzzleId];
         counts[puzzleId] = puzzleSubs.length;
-        gradedCounts[puzzleId] = puzzleSubs.filter(sub => sub.grade).length;
+        gradedCounts[puzzleId] = puzzleSubs.filter((sub) => sub.grade).length;
       });
 
       setSubmissionCounts(counts);
@@ -153,43 +181,54 @@ const AdminPuzzles: React.FC = () => {
   const loadPuzzles = async () => {
     try {
       setLoading(true);
-      
+
       // Load puzzles by status
       const [activeList, backlogList, archivedList] = await Promise.all([
-        puzzleService.getPuzzlesByStatus('active'),
-        puzzleService.getPuzzlesByStatus('backlog'),
-        puzzleService.getPuzzlesByStatus('archived')
+        puzzleService.getPuzzlesByStatus("active"),
+        puzzleService.getPuzzlesByStatus("backlog"),
+        puzzleService.getPuzzlesByStatus("archived"),
       ]);
-      
+
       setActivePuzzles(activeList);
       setBacklogPuzzles(backlogList);
       setArchivedPuzzles(archivedList);
-      
+
       // Load submission counts for all puzzles
       const allPuzzles = [...activeList, ...backlogList, ...archivedList];
       const counts: Record<string, number> = {};
       const gradedCounts: Record<string, number> = {};
-      
+
       for (const puzzle of allPuzzles) {
         try {
-          console.log(`Loading submissions for puzzle: ${puzzle.id} - ${puzzle.title}`);
-          const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
-          console.log(`Found ${submissions.length} submissions for puzzle ${puzzle.id}`);
+          console.log(
+            `Loading submissions for puzzle: ${puzzle.id} - ${puzzle.title}`
+          );
+          const submissions = await potwService.getPuzzleSubmissionsForGrading(
+            puzzle.id!
+          );
+          console.log(
+            `Found ${submissions.length} submissions for puzzle ${puzzle.id}`
+          );
           counts[puzzle.id!] = submissions.length;
-          gradedCounts[puzzle.id!] = submissions.filter(sub => sub.grade).length;
+          gradedCounts[puzzle.id!] = submissions.filter(
+            (sub) => sub.grade
+          ).length;
         } catch (error) {
-          console.error(`Error loading submissions for puzzle ${puzzle.id}:`, error);
+          console.error(
+            `Error loading submissions for puzzle ${puzzle.id}:`,
+            error
+          );
           counts[puzzle.id!] = 0;
           gradedCounts[puzzle.id!] = 0;
         }
       }
-      
-      console.log('Final submission counts:', counts);
-      console.log('Final graded counts:', gradedCounts);
+
+      console.log("Final submission counts:", counts);
+      console.log("Final graded counts:", gradedCounts);
       setSubmissionCounts(counts);
       setGradedCounts(gradedCounts);
     } catch (error) {
-      console.error('Error loading puzzles:', error);
+      console.error("Error loading puzzles:", error);
     } finally {
       setLoading(false);
     }
@@ -210,7 +249,7 @@ const AdminPuzzles: React.FC = () => {
           solution: formData.solution,
           image: formData.image,
         };
-        
+
         // Handle expiry date - either set it or explicitly remove it
         if (formData.expiresAt) {
           updates.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
@@ -218,36 +257,41 @@ const AdminPuzzles: React.FC = () => {
           // Explicitly set to undefined to remove the field from Firestore
           updates.expiresAt = undefined;
         }
-        
+
         await puzzleService.updatePuzzle(editingPuzzle.id!, updates);
       } else {
         // Create new puzzle (will be in backlog status by default)
-        const puzzleData: Omit<Puzzle, 'id' | 'createdAt' | 'createdBy' | 'status'> = {
+        const puzzleData: Omit<
+          Puzzle,
+          "id" | "createdAt" | "createdBy" | "status"
+        > = {
           title: formData.title,
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toISOString().split("T")[0],
           prompt: formData.prompt,
           difficulty: formData.difficulty,
           correctAnswer: formData.correctAnswer,
           solution: formData.solution,
           image: formData.image,
         };
-        
+
         if (formData.expiresAt) {
-          puzzleData.expiresAt = Timestamp.fromDate(new Date(formData.expiresAt));
+          puzzleData.expiresAt = Timestamp.fromDate(
+            new Date(formData.expiresAt)
+          );
         }
-        
+
         await puzzleService.createPuzzle(puzzleData, currentUser.uid);
       }
 
       // Reset form and reload puzzles
       setFormData({
-        title: '',
-        prompt: '',
+        title: "",
+        prompt: "",
         difficulty: 3,
-        correctAnswer: '',
-        solution: '',
-        image: '',
-        expiresAt: '',
+        correctAnswer: "",
+        solution: "",
+        image: "",
+        expiresAt: "",
       });
       setOriginalFormData(null); // Clear original data
       setHasFormChanges(false); // Reset change state
@@ -255,7 +299,7 @@ const AdminPuzzles: React.FC = () => {
       setIsDialogOpen(false);
       loadPuzzles();
     } catch (error) {
-      console.error('Error saving puzzle:', error);
+      console.error("Error saving puzzle:", error);
     }
   };
 
@@ -265,10 +309,12 @@ const AdminPuzzles: React.FC = () => {
       title: puzzle.title,
       prompt: puzzle.prompt,
       difficulty: puzzle.difficulty,
-      correctAnswer: puzzle.correctAnswer || '',
-      solution: puzzle.solution || '',
-      image: puzzle.image || '',
-      expiresAt: puzzle.expiresAt ? new Date(puzzle.expiresAt.seconds * 1000).toISOString().slice(0, 16) : '',
+      correctAnswer: puzzle.correctAnswer || "",
+      solution: puzzle.solution || "",
+      image: puzzle.image || "",
+      expiresAt: puzzle.expiresAt
+        ? new Date(puzzle.expiresAt.seconds * 1000).toISOString().slice(0, 16)
+        : "",
     };
     setFormData(newFormData);
     setOriginalFormData(newFormData); // Store original data for comparison
@@ -290,7 +336,7 @@ const AdminPuzzles: React.FC = () => {
       loadPuzzles();
       setDeleteDialog({ isOpen: false, puzzle: null });
     } catch (error) {
-      console.error('Error deleting puzzle:', error);
+      console.error("Error deleting puzzle:", error);
     }
   };
 
@@ -309,9 +355,11 @@ const AdminPuzzles: React.FC = () => {
   const handleArchivePuzzle = async (puzzle: Puzzle) => {
     try {
       // Check if there are ungraded submissions
-      const submissions = await potwService.getPuzzleSubmissionsForGrading(puzzle.id!);
-      const ungradedSubmissions = submissions.filter(sub => !sub.grade);
-      
+      const submissions = await potwService.getPuzzleSubmissionsForGrading(
+        puzzle.id!
+      );
+      const ungradedSubmissions = submissions.filter((sub) => !sub.grade);
+
       // Always show dialog, but include ungraded count for warning
       setActiveDialog({
         isOpen: true,
@@ -320,7 +368,7 @@ const AdminPuzzles: React.FC = () => {
         ungradedCount: ungradedSubmissions.length,
       });
     } catch (error) {
-      console.error('Error checking submissions before archive:', error);
+      console.error("Error checking submissions before archive:", error);
       // If there's an error checking submissions, still show the dialog
       setActiveDialog({
         isOpen: true,
@@ -339,15 +387,16 @@ const AdminPuzzles: React.FC = () => {
         // Activate the puzzle (will archive any currently active puzzle)
         await puzzleService.setPuzzleActive(activeDialog.puzzle.id!);
       } else {
-        // Archive the puzzle (archivedAt will be set server-side)
+        // Archive the puzzle
         await puzzleService.updatePuzzle(activeDialog.puzzle.id!, {
-          status: 'archived'
+          status: "archived",
+          archivedAt: new Date() as any,
         });
       }
       loadPuzzles();
       setActiveDialog({ isOpen: false, puzzle: null, newStatus: false });
     } catch (error) {
-      console.error('Error updating puzzle status:', error);
+      console.error("Error updating puzzle status:", error);
     }
   };
 
@@ -355,7 +404,11 @@ const AdminPuzzles: React.FC = () => {
     setActiveDialog({ isOpen: false, puzzle: null, newStatus: false });
   };
 
-  const renderPuzzleTable = (puzzles: Puzzle[], title: string, showActivateButton: boolean = false) => {
+  const renderPuzzleTable = (
+    puzzles: Puzzle[],
+    title: string,
+    showActivateButton: boolean = false
+  ) => {
     if (puzzles.length === 0) {
       return (
         <Card className="mb-6">
@@ -374,7 +427,9 @@ const AdminPuzzles: React.FC = () => {
     return (
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>{title} ({puzzles.length})</CardTitle>
+          <CardTitle>
+            {title} ({puzzles.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -393,23 +448,32 @@ const AdminPuzzles: React.FC = () => {
                 <TableRow key={puzzle.id}>
                   <TableCell className="font-medium">{puzzle.title}</TableCell>
                   <TableCell>
-                    {puzzle.createdAt ? new Date(puzzle.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    {puzzle.createdAt
+                      ? new Date(
+                          puzzle.createdAt.seconds * 1000
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {'🌶️'.repeat(puzzle.difficulty)}
+                      {"🌶️".repeat(puzzle.difficulty)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {puzzle.expiresAt ? (
                       <div className="text-sm">
                         <div className="font-medium">
-                          {new Date(puzzle.expiresAt.seconds * 1000).toLocaleDateString()}
+                          {new Date(
+                            puzzle.expiresAt.seconds * 1000
+                          ).toLocaleDateString()}
                         </div>
                         <div className="text-gray-500">
-                          {new Date(puzzle.expiresAt.seconds * 1000).toLocaleTimeString()}
+                          {new Date(
+                            puzzle.expiresAt.seconds * 1000
+                          ).toLocaleTimeString()}
                         </div>
-                        {new Date() > new Date(puzzle.expiresAt.seconds * 1000) && (
+                        {new Date() >
+                          new Date(puzzle.expiresAt.seconds * 1000) && (
                           <Badge variant="destructive" className="text-xs">
                             Expired
                           </Badge>
@@ -420,11 +484,16 @@ const AdminPuzzles: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={puzzle.status === 'active' ? 'default' : 'secondary'}
-                      className={puzzle.status === 'active' ? 'bg-green-600' : ''}
+                    <Badge
+                      variant={
+                        puzzle.status === "active" ? "default" : "secondary"
+                      }
+                      className={
+                        puzzle.status === "active" ? "bg-green-600" : ""
+                      }
                     >
-                      {puzzle.status.charAt(0).toUpperCase() + puzzle.status.slice(1)}
+                      {puzzle.status.charAt(0).toUpperCase() +
+                        puzzle.status.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -433,13 +502,19 @@ const AdminPuzzles: React.FC = () => {
                         size="sm"
                         variant="default"
                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => navigate(`/admin/puzzle-submissions/${puzzle.id}`)}
+                        onClick={() =>
+                          navigate(`/admin/puzzle-submissions/${puzzle.id}`)
+                        }
                         title="View Submissions"
                       >
                         <FileText className="h-4 w-4" />
                         <span className="ml-1">Submissions</span>
-                        <Badge variant="secondary" className="ml-2 bg-white text-blue-600">
-                          {gradedCounts[puzzle.id!] || 0}/{submissionCounts[puzzle.id!] || 0}
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 bg-white text-blue-600"
+                        >
+                          {gradedCounts[puzzle.id!] || 0}/
+                          {submissionCounts[puzzle.id!] || 0}
                         </Badge>
                       </Button>
                       <Button
@@ -449,7 +524,7 @@ const AdminPuzzles: React.FC = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {showActivateButton && puzzle.status === 'backlog' && (
+                      {showActivateButton && puzzle.status === "backlog" && (
                         <Button
                           size="sm"
                           variant="default"
@@ -459,7 +534,7 @@ const AdminPuzzles: React.FC = () => {
                           Activate
                         </Button>
                       )}
-                      {puzzle.status === 'active' && (
+                      {puzzle.status === "active" && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -473,7 +548,7 @@ const AdminPuzzles: React.FC = () => {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleDeleteClick(puzzle)}
-                        disabled={puzzle.status === 'active'}
+                        disabled={puzzle.status === "active"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -487,7 +562,6 @@ const AdminPuzzles: React.FC = () => {
       </Card>
     );
   };
-
 
   if (adminLoading) {
     return (
@@ -512,8 +586,12 @@ const AdminPuzzles: React.FC = () => {
           <Card className="w-full max-w-md">
             <CardContent className="p-6">
               <div className="text-center">
-                <h2 className="text-xl font-semibold text-red-600 mb-2">Access Denied</h2>
-                <p className="text-gray-600">You don't have permission to manage puzzles.</p>
+                <h2 className="text-xl font-semibold text-red-600 mb-2">
+                  Access Denied
+                </h2>
+                <p className="text-gray-600">
+                  You don't have permission to manage puzzles.
+                </p>
                 <p className="text-sm text-gray-500 mt-2">
                   Contact an administrator to get access.
                 </p>
@@ -529,7 +607,7 @@ const AdminPuzzles: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -544,20 +622,22 @@ const AdminPuzzles: React.FC = () => {
         <div className="mb-6">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditingPuzzle(null);
-                setFormData({
-                  title: '',
-                  prompt: '',
-                  difficulty: 3,
-                  correctAnswer: '',
-                  solution: '',
-                  image: '',
-                  expiresAt: '',
-                });
-                setOriginalFormData(null); // Clear original data for new puzzle
-                setHasFormChanges(false); // Reset change state
-              }}>
+              <Button
+                onClick={() => {
+                  setEditingPuzzle(null);
+                  setFormData({
+                    title: "",
+                    prompt: "",
+                    difficulty: 3,
+                    correctAnswer: "",
+                    solution: "",
+                    image: "",
+                    expiresAt: "",
+                  });
+                  setOriginalFormData(null); // Clear original data for new puzzle
+                  setHasFormChanges(false); // Reset change state
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add New Puzzle
               </Button>
@@ -565,7 +645,7 @@ const AdminPuzzles: React.FC = () => {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editingPuzzle ? 'Edit Puzzle' : 'Create New Puzzle'}
+                  {editingPuzzle ? "Edit Puzzle" : "Create New Puzzle"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -574,19 +654,25 @@ const AdminPuzzles: React.FC = () => {
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="expiresAt">Expiration Date & Time (Optional)</Label>
+                  <Label htmlFor="expiresAt">
+                    Expiration Date & Time (Optional)
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       id="expiresAt"
                       type="datetime-local"
                       value={formData.expiresAt}
-                      onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, expiresAt: e.target.value })
+                      }
                       className="flex-1"
                     />
                     {formData.expiresAt && (
@@ -594,7 +680,9 @@ const AdminPuzzles: React.FC = () => {
                         type="button"
                         variant="destructive"
                         size="sm"
-                        onClick={() => setFormData({ ...formData, expiresAt: '' })}
+                        onClick={() =>
+                          setFormData({ ...formData, expiresAt: "" })
+                        }
                         className="px-3"
                         title="Remove expiry date"
                       >
@@ -603,7 +691,8 @@ const AdminPuzzles: React.FC = () => {
                     )}
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    Leave empty for no expiration. If set, students won't be able to submit after this time.
+                    Leave empty for no expiration. If set, students won't be
+                    able to submit after this time.
                   </p>
                 </div>
 
@@ -612,7 +701,9 @@ const AdminPuzzles: React.FC = () => {
                   <Textarea
                     id="prompt"
                     value={formData.prompt}
-                    onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, prompt: e.target.value })
+                    }
                     rows={4}
                     required
                   />
@@ -626,7 +717,12 @@ const AdminPuzzles: React.FC = () => {
                     min="1"
                     max="5"
                     value={formData.difficulty}
-                    onChange={(e) => setFormData({ ...formData, difficulty: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        difficulty: parseInt(e.target.value),
+                      })
+                    }
                     required
                   />
                 </div>
@@ -637,16 +733,25 @@ const AdminPuzzles: React.FC = () => {
                     id="image"
                     type="url"
                     value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image: e.target.value })
+                    }
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="correctAnswer">Correct Answer (optional)</Label>
+                  <Label htmlFor="correctAnswer">
+                    Correct Answer (optional)
+                  </Label>
                   <Input
                     id="correctAnswer"
                     value={formData.correctAnswer}
-                    onChange={(e) => setFormData({ ...formData, correctAnswer: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        correctAnswer: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
@@ -655,22 +760,29 @@ const AdminPuzzles: React.FC = () => {
                   <Textarea
                     id="solution"
                     value={formData.solution}
-                    onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, solution: e.target.value })
+                    }
                     rows={3}
                   />
                 </div>
 
-
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={editingPuzzle ? !hasFormChanges : false}
-                    title={editingPuzzle && !hasFormChanges ? "No changes made" : ""}
+                    title={
+                      editingPuzzle && !hasFormChanges ? "No changes made" : ""
+                    }
                   >
-                    {editingPuzzle ? 'Update Puzzle' : 'Create Puzzle'}
+                    {editingPuzzle ? "Update Puzzle" : "Create Puzzle"}
                   </Button>
                 </div>
                 {editingPuzzle && !hasFormChanges && (
@@ -693,10 +805,14 @@ const AdminPuzzles: React.FC = () => {
           <>
             {/* Current Active Puzzle */}
             {renderPuzzleTable(activePuzzles, "Current Active Puzzle")}
-            
+
             {/* Backlog Puzzles */}
-            {renderPuzzleTable(backlogPuzzles, "Backlog Puzzles (Candidates)", true)}
-            
+            {renderPuzzleTable(
+              backlogPuzzles,
+              "Backlog Puzzles (Candidates)",
+              true
+            )}
+
             {/* Archived Puzzles */}
             {renderPuzzleTable(archivedPuzzles, "Archived Puzzles")}
           </>
@@ -704,19 +820,25 @@ const AdminPuzzles: React.FC = () => {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({ isOpen: open, puzzle: null })}>
+      <AlertDialog
+        open={deleteDialog.isOpen}
+        onOpenChange={(open) => setDeleteDialog({ isOpen: open, puzzle: null })}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Puzzle</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the puzzle <strong>"{deleteDialog.puzzle?.title}"</strong>?
-              <br /><br />
-              This action cannot be undone. All submissions for this puzzle will also be permanently deleted.
+              Are you sure you want to delete the puzzle{" "}
+              <strong>"{deleteDialog.puzzle?.title}"</strong>?
+              <br />
+              <br />
+              This action cannot be undone. All submissions for this puzzle will
+              also be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -727,15 +849,22 @@ const AdminPuzzles: React.FC = () => {
       </AlertDialog>
 
       {/* Active Status Confirmation Dialog */}
-      <AlertDialog open={activeDialog.isOpen} onOpenChange={(open) => setActiveDialog({ isOpen: open, puzzle: null, newStatus: false })}>
+      <AlertDialog
+        open={activeDialog.isOpen}
+        onOpenChange={(open) =>
+          setActiveDialog({ isOpen: open, puzzle: null, newStatus: false })
+        }
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
             <AlertDialogDescription>
               {activeDialog.newStatus ? (
                 <>
-                  Are you sure you want to activate the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
-                  <br /><br />
+                  Are you sure you want to activate the puzzle{" "}
+                  <strong>"{activeDialog.puzzle?.title}"</strong>?
+                  <br />
+                  <br />
                   <strong>Activating this puzzle will:</strong>
                   <br />• Make it visible to all users on the POTW page
                   <br />• Allow users to submit solutions
@@ -744,57 +873,72 @@ const AdminPuzzles: React.FC = () => {
                 </>
               ) : (
                 <>
-                  {activeDialog.ungradedCount && activeDialog.ungradedCount > 0 ? (
+                  {activeDialog.ungradedCount &&
+                  activeDialog.ungradedCount > 0 ? (
                     <>
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-orange-600 text-lg">⚠️</span>
-                          <strong className="text-orange-800">Ungraded Submissions Detected</strong>
+                          <strong className="text-orange-800">
+                            Ungraded Submissions Detected
+                          </strong>
                         </div>
                         <p className="text-orange-700 text-sm">
-                          This puzzle has <strong>{activeDialog.ungradedCount} ungraded submission{activeDialog.ungradedCount > 1 ? 's' : ''}</strong> that need to be reviewed before archiving.
+                          This puzzle has{" "}
+                          <strong>
+                            {activeDialog.ungradedCount} ungraded submission
+                            {activeDialog.ungradedCount > 1 ? "s" : ""}
+                          </strong>{" "}
+                          that need to be reviewed before archiving.
                         </p>
                         <p className="text-orange-600 text-xs mt-2">
-                          Please grade all submissions first, or proceed with archiving if you're sure.
+                          Please grade all submissions first, or proceed with
+                          archiving if you're sure.
                         </p>
                       </div>
                     </>
                   ) : null}
-                  
-                  Are you sure you want to archive the puzzle <strong>"{activeDialog.puzzle?.title}"</strong>?
-                  <br /><br />
+                  Are you sure you want to archive the puzzle{" "}
+                  <strong>"{activeDialog.puzzle?.title}"</strong>?
+                  <br />
+                  <br />
                   <strong>Archiving this puzzle will:</strong>
                   <br />• Hide it from users on the POTW page
                   <br />• Prevent new submissions
                   <br />• Keep existing submissions intact
                   <br />• Move this puzzle to archived status
-                  {activeDialog.ungradedCount && activeDialog.ungradedCount > 0 && (
-                    <>
-                      <br />• <span className="text-orange-600">Ungraded submissions will remain ungraded</span>
-                    </>
-                  )}
+                  {activeDialog.ungradedCount &&
+                    activeDialog.ungradedCount > 0 && (
+                      <>
+                        <br />•{" "}
+                        <span className="text-orange-600">
+                          Ungraded submissions will remain ungraded
+                        </span>
+                      </>
+                    )}
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelActiveChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel onClick={cancelActiveChange}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={confirmActiveChange}
               className={
-                activeDialog.newStatus 
-                  ? "bg-green-600 hover:bg-green-700" 
+                activeDialog.newStatus
+                  ? "bg-green-600 hover:bg-green-700"
                   : activeDialog.ungradedCount && activeDialog.ungradedCount > 0
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-orange-600 hover:bg-orange-700"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-orange-600 hover:bg-orange-700"
               }
             >
-              {activeDialog.newStatus 
-                ? 'Activate Puzzle' 
+              {activeDialog.newStatus
+                ? "Activate Puzzle"
                 : activeDialog.ungradedCount && activeDialog.ungradedCount > 0
-                  ? 'Archive Anyway (Ungraded)'
-                  : 'Archive Puzzle'
-              }
+                ? "Archive Anyway (Ungraded)"
+                : "Archive Puzzle"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
