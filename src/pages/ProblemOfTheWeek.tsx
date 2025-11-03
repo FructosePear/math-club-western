@@ -553,7 +553,9 @@ export default function ProblemOfTheWeek() {
                   >
                     POTW Homebase
                   </Button>
-                  <Button
+
+                  {/* Leaderboard Section, not used right now because privacy breach */}
+                  {/* <Button
                     variant={
                       activeSection === "leaderboard" ? "default" : "ghost"
                     }
@@ -561,7 +563,8 @@ export default function ProblemOfTheWeek() {
                     onClick={() => setActiveSection("leaderboard")}
                   >
                     Leaderboard
-                  </Button>
+                  </Button> */}
+
                   <Button
                     variant={
                       activeSection === "information" ? "default" : "ghost"
