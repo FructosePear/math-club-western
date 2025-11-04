@@ -488,7 +488,7 @@ export default function ProblemOfTheWeek() {
 
             {puzzle.image && (
               <img
-                src={withBase(puzzle.image!)}
+                src={puzzle.image!}
                 alt={puzzle.title}
                 className="mb-6 w-full rounded-lg border object-contain"
               />
