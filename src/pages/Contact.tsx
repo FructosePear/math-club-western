@@ -44,6 +44,23 @@ const Contact = () => {
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
             <h1 className="mb-6 text-5xl font-bold text-gray-800">
+              Communities
+            </h1>
+            <p className="mx-auto max-w-3xl text-xl text-gray-600">
+              Get in touch with other mathematics students in Calgary! Join our
+              Discord server{" "}
+              <a
+                className="text-blue-600 underline hover:text-blue-700"
+                color="red"
+                href="https://discord.gg/GVCDuf4Y6m"
+              >
+                here!
+              </a>
+            </p>
+          </div>
+
+          <div className="mb-12 text-center">
+            <h1 className="mb-6 text-5xl font-bold text-gray-800">
               Contact Us
             </h1>
             <p className="mx-auto max-w-3xl text-xl text-gray-600">
