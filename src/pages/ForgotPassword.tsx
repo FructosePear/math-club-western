@@ -1,38 +1,46 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Mail } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ArrowLeft, Mail } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ForgotPassword: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
     setLoading(true);
 
     try {
       await resetPassword(email);
-      setMessage('Password reset email sent! Check your inbox and follow the instructions.');
+      setMessage(
+        "Password reset email sent! Check your inbox and follow the instructions."
+      );
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        setError('No account found with this email address.');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
+      if (error.code === "auth/user-not-found") {
+        setError("No account found with this email address.");
+      } else if (error.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
       } else {
-        setError('Failed to send password reset email. Please try again.');
+        setError("Failed to send password reset email. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -42,13 +50,13 @@ const ForgotPassword: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Header />
-      
+
       <div className="flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
             <div className="flex items-center space-x-2">
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="text-blue-600 hover:text-blue-700 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -58,7 +66,8 @@ const ForgotPassword: React.FC = () => {
               </CardTitle>
             </div>
             <CardDescription>
-              Enter your email address and we'll send you a link to reset your password.
+              Put your email address here and we'll send you a link to reset
+              your password.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -97,9 +106,9 @@ const ForgotPassword: React.FC = () => {
 
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-600">
-                Remember your password?{' '}
-                <Link 
-                  to="/login" 
+                Remember your password?{" "}
+                <Link
+                  to="/login"
                   className="text-blue-600 hover:underline font-medium"
                 >
                   Back to Login
