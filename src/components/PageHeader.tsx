@@ -43,7 +43,7 @@ const PageHeader = ({
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         }`}
       >
-        <h1 className="mb-6 text-5xl font-bold">{title}</h1>
+        <h1 className="mb-6 text-5xl font-display">{title}</h1>
         {subtitle && <p className="mx-auto max-w-3xl text-xl">{subtitle}</p>}
       </div>
     </div>
