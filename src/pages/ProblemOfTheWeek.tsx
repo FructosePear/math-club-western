@@ -50,17 +50,17 @@ function getStars(n: number): string {
 function getGradeMessage(grade: number): string {
   switch (grade) {
     case 5:
-      return "Outstanding! Perfect solution! 🌟";
+      return "WOW! Your solution was amazing :D";
     case 4:
-      return "Excellent work! Great solution! 👏";
+      return "Close to perfect! Well done haha :)";
     case 3:
-      return "Good job! Solid understanding! 👍";
+      return "Solid answer - we liked your response 👍";
     case 2:
-      return "Not quite there, but good effort! Keep trying! 💪";
+      return "Not quite there, but amazing effort!";
     case 1:
-      return "Keep practicing! You'll get it next time! 📚";
+      return "It's chill! We'll get it next time.";
     default:
-      return "Grade pending review.";
+      return "We haven't marked your submission yet, but stay tuned!";
   }
 }
 
@@ -187,13 +187,14 @@ export default function ProblemOfTheWeek() {
           <header className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">POTW Archive</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Browse all past Problem of the Week challenges
+              Browse all past Problem of the Week puzzles
             </p>
           </header>
 
           {allPuzzles.filter((p) => p.status === "archived").length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No archived puzzles found yet.
+              Hmm... it seems there are no archived puzzles yet. Try logging in
+              if you haven't yet!
             </div>
           ) : (
             <div className="space-y-6">
@@ -237,7 +238,8 @@ export default function ProblemOfTheWeek() {
                                   {userSubmissions[p.id!].grade ? (
                                     <>
                                       <span className="text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-full text-xs">
-                                        🎯 Grade: {userSubmissions[p.id!].grade}
+                                        Your grade for this week's problem is:{" "}
+                                        {userSubmissions[p.id!].grade}
                                         /5
                                       </span>
                                     </>
@@ -278,7 +280,7 @@ export default function ProblemOfTheWeek() {
                                     : withBase(p.image)
                                 }
                                 alt={p.title}
-                                className="w-full rounded-lg border object-contain max-h-96"
+                                className="w-full max-w-[50%] rounded-lg border object-contain max-h-96"
                               />
                             </div>
                           )}
@@ -475,11 +477,14 @@ export default function ProblemOfTheWeek() {
             </header>
 
             {puzzle.image && (
-              <img
-                src={puzzle.image!}
-                alt={puzzle.title}
-                className="mb-6 w-full rounded-lg border object-contain"
-              />
+              <div className="mb-6 flex justify-center">
+                <img
+                  src={puzzle.image!}
+                  alt={puzzle.title}
+                  loading="lazy"
+                  className="w-full max-w-[50%] rounded-lg border object-contain max-h-96"
+                />
+              </div>
             )}
 
             <p className="mb-8 whitespace-pre-wrap text-gray-800">
@@ -708,7 +713,7 @@ function SubmissionForm({
       <h3 className="mb-4 text-lg font-semibold">Submit Your Answer</h3>
 
       {!currentUser ? (
-        <div className="text-center py-8">
+        <div className="text-center py-4">
           <p className="text-gray-600 mb-4">
             Please log in to submit your answer.
           </p>
@@ -720,33 +725,35 @@ function SubmissionForm({
           </Link>
         </div>
       ) : submitted ? (
-        <div className="text-center py-4">
-          <p className="text-green-600 font-medium">
-            ✅ You have already submitted your answer for this puzzle!
-          </p>
+        <div className="text-center">
           {submissionData?.grade ? (
             <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-blue-800 font-semibold">
-                🎯 Your Grade: {submissionData.grade}/5
+                Your Grade: {submissionData.grade}/5
               </p>
               <p className="text-sm text-blue-600 mt-1">
                 {getGradeMessage(submissionData.grade)}
               </p>
             </div>
           ) : (
-            <p className="text-sm text-gray-600 mt-2">
-              Thank you for participating! Your submission is being reviewed.
-            </p>
+            <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <p className="text-green-600 font-medium">
+                ✅ Response received!
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
+                Your submission hasn't been marked yet. Stay tuned!
+              </p>
+            </div>
           )}
         </div>
       ) : puzzle.expiresAt &&
         new Date() > new Date(puzzle.expiresAt.seconds * 1000) ? (
         <div className="text-center py-4">
           <p className="text-red-600 font-medium">
-            ⏰ This puzzle has expired!
+            ⏰ Yikes... this puzzle is expired. You can still try it though!
           </p>
           <p className="text-sm text-gray-600 mt-2">
-            Submissions are no longer accepted for this puzzle.
+            We aren't accepting submissions for this puzzle currently.
           </p>
         </div>
       ) : (
@@ -822,7 +829,7 @@ function SubmissionForm({
               <br />
               <br />
               <strong>Important:</strong> You can only submit once per puzzle.
-              Make sure your answer is complete and correct before proceeding.
+              Make sure your answer is complete and correct before proceeding!
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
