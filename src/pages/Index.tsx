@@ -41,7 +41,7 @@ const Index = () => {
         <div className="to-purple-150 h-12 bg-gradient-to-b from-blue-50" />
 
         {/* Call to Action */}
-        <CallToAction />
+        {/* <CallToAction /> */}
 
         {/* Footer */}
         <Footer />
