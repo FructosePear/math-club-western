@@ -55,19 +55,20 @@ const Hero = () => {
         <div className="flex justify-center gap-4">
           <Link to="/problem-of-the-week">
             <Button
-              size="lg"
+              size="sm"
               variant="outline"
-              className="border-white text-blue-600 hover:bg-gray-100 hover:text-blue-600"
+              className="bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-600"
             >
               Weekly POTW
             </Button>
           </Link>
           <Link to="/about">
             <Button
-              size="lg"
+              size="sm"
+              variant="outline"
               className="bg-white text-blue-600 hover:bg-gray-100"
             >
-              Who are we?
+              More about us
             </Button>
           </Link>
         </div>
