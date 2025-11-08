@@ -100,4 +100,9 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+
+  /* stronger text shadow for headings */
+  .text-shadow {
+    text-shadow: 0 0px 30px rgba(0, 0, 0, 2);
+  }
 }
