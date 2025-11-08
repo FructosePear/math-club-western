@@ -372,27 +372,15 @@ export default function ProblemOfTheWeek() {
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700">
               <p>
-                The Problem of the Week (POTW) is a weekly mathematical
-                challenge designed to test your problem-solving skills and
-                mathematical reasoning. Each week, we present a new puzzle that
-                ranges in difficulty from beginner to advanced levels.
-              </p>
-              <p>
-                By participating consistently, you can earn coins and build your
-                streak. These achievements not only showcase your dedication but
-                can also be redeemed for exciting prizes and recognition within
-                our community.
-              </p>
-              <p>
-                Whether you're a seasoned mathematician or just starting your
-                journey, POTW offers a fun and engaging way to sharpen your
-                skills, think creatively, and connect with fellow problem
-                solvers. Submit your solutions, track your progress, and climb
-                the leaderboard!
+                Every week, an eerie disturbance arises in Calgary: the Problem
+                of the Week. As fellow students and mathematicians, your job is
+                to submit a correct answer to amend this disturbance. As you
+                submit more answers, you will collect coins. These coins can be
+                redeemed for candy, keychain, and all sorts of prizes!
               </p>
               <p className="font-semibold">
-                Challenge yourself weekly and watch your mathematical prowess
-                grow!
+                Are you ready to take on our weekly challenges? Check above for
+                our current active puzzle!
               </p>
             </CardContent>
           </Card>

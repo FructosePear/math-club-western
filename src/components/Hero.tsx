@@ -35,7 +35,7 @@ const Hero = () => {
 
       {/* Gradient Overlay */}
 
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 via-purple-700/85 to-blue-800/90 opacity-50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 via-purple-700/85 to-blue-800/90 opacity-0" />
 
       {/* Fade to next section */}
       <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-white" />

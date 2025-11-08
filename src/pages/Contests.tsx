@@ -67,8 +67,7 @@ const Contests = () => {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">Past Contests</h2>
             <p className="text-gray-600">
-              Access problems, solutions, and marking guides from previous
-              Calgary High School Math Competitions.
+              Check out some of our past contests!
             </p>
             <Table>
               <TableHeader>
@@ -107,10 +106,11 @@ const Contests = () => {
                   </TableCell>
                   <TableCell>
                     <Link
-                      to="/events/review-2025"
+                      //   to="/events/review-2025" NOT YET AVAILABLE
+                      to="*"
                       className="text-blue-500 hover:underline"
                     >
-                      CHSMC 2025 Event Review
+                      CHSMC 2025 Review - Incomplete
                     </Link>
                   </TableCell>
                 </TableRow>
@@ -180,7 +180,7 @@ const Contests = () => {
       <Header />
       <PageHeader
         title="Contests"
-        subtitle="Participate in mathematics competitions, access past contest materials, and practice with our quiz system."
+        subtitle="Through debate, collaboration, and even novel trivia-show formats, our contests will reshape the way you think about mathematics. Learn more below:"
         backgroundImage="https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=1920&h=600&fit=crop"
       />
 

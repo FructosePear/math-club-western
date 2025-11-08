@@ -9,7 +9,7 @@ interface PageHeaderProps {
 const PageHeader = ({
   title,
   subtitle,
-  backgroundImage = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&h=600&fit=crop",
+  backgroundImage = "",
 }: PageHeaderProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -21,7 +21,7 @@ const PageHeader = ({
   }, []);
 
   return (
-    <div className="relative overflow-hidden py-28">
+    <div className="relative overflow-hidden py-40">
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -31,7 +31,7 @@ const PageHeader = ({
       {/* Gradient Overlay */}
       <div
         className={`absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-700/90 ${
-          backgroundImage ? "opacity-50" : "opacity-100"
+          backgroundImage ? "opacity-0" : "opacity-100"
         }`}
       />
 
