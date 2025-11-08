@@ -7,7 +7,6 @@ import { useState } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import About from "./pages/TeamPage";
-import Quiz from "./pages/Quiz";
 import Contests from "./pages/Contests";
 import NotFound from "./pages/NotFound";
 import Events from "./pages/Events";
@@ -38,7 +37,6 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
-              <Route path="/quiz" element={<Quiz />} />
               <Route path="/contests" element={<Contests />} />
               <Route path="/events" element={<Events />} />
               <Route path="/events/review-2025" element={<EventReview2025 />} />
