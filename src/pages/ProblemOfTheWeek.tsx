@@ -525,7 +525,7 @@ export default function ProblemOfTheWeek() {
       <Header />
       <PageHeader
         title="Problem Of The Week"
-        subtitle="Every week, a disturbance arises in Calgary: the Problem of the Week. As an avid mathematician, it is your duty to solve the problem and restore order."
+        subtitle="Every week, a disturbance arises in Calgary: the Problem of the Week. As an avid mathematician, it is your responsibility to try your best to solve the problem, restoring order to our city."
         backgroundImage="https://img.lovepik.com/bg/20240224/3D-Rendered-Technological-Dark-Toned-Tech-Waves-with-Polygons-and_3695383_wh1200.jpg"
       />
 

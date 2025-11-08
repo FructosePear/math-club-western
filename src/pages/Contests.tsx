@@ -49,8 +49,14 @@ const Contests = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="mb-4 text-sm text-gray-600">
-                    The annual Calgary High School Mathematics Contest featuring
-                    challenging problems for high school students.
+                    Pencil, Paper... Presentations? Our annual CHSMC, targeted
+                    towards all high-schoolers and advanced middle-schoolers, is
+                    graded mostly on the ability for participants to convey
+                    their ideas and mathematical arguments expressively. This
+                    means hooks, engaging intros, and clarity play a major role
+                    in scoring! While this debate-style element may seem scary,
+                    it's actually really friendly to beginners - everyone has
+                    the chance to win, as long their passion shines through!
                   </p>
                   <p className="text-sm font-semibold">Date: March 15, 2024</p>
                   <p className="text-sm">
@@ -181,7 +187,7 @@ const Contests = () => {
       <PageHeader
         title="Contests"
         subtitle="Through debate, collaboration, and even novel trivia-show formats, our contests will reshape the way you think about mathematics. Learn more below:"
-        backgroundImage="https://images.unsplash.com/photo-1509228627152-72ae9ae6848d?w=1920&h=600&fit=crop"
+        backgroundImage="https://live.staticflickr.com/65535/54909152724_77f26ccf51_b.jpg"
       />
 
       <div className="py-8">
