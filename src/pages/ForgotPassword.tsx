@@ -66,8 +66,9 @@ const ForgotPassword: React.FC = () => {
               </CardTitle>
             </div>
             <CardDescription>
-              Put your email address here and we'll send you a link to reset
-              your password.
+              Oops! Forgot your password? It's alright, it happens to the best
+              of us. Put your email address here and we'll send you a link to
+              create a new password.
             </CardDescription>
           </CardHeader>
           <CardContent>
