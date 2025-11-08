@@ -83,7 +83,8 @@ const POTWArchive: React.FC = () => {
               <div className="text-center">
                 <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                  No Archived Puzzles Yet
+                  No archived puzzles found. If you believe this is an error,
+                  try logging in.
                 </h3>
                 <p className="text-gray-500">
                   Check back later to see past Problem of the Week puzzles.
