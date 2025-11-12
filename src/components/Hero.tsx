@@ -29,7 +29,7 @@ const Hero = () => {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('https://i.ibb.co/rGkKgVJZ/IMG-3361.jpg')",
+          backgroundImage: "url('https://i.imgur.com/pUPSiD7.jpeg')",
         }}
       />
 
@@ -51,6 +51,7 @@ const Hero = () => {
         <p className="mx-auto mb-12 max-w-3xl text-xl">
           That's why our cross-Calgary high school Math Clubs coalition is
           dedicated to giving mathematics - as well as its students - a voice.
+          Check out some of the stuff we've already been doing below:
         </p>
         <div className="flex justify-center gap-4">
           <Link to="/problem-of-the-week">
